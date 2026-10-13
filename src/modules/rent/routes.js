@@ -3,6 +3,7 @@ import groups from './nav'
 // Real pages replace the placeholder one by one:
 const pages = {
   '/rent': () => import('./views/DashboardView.vue'),
+  '/rent/customers': () => import('./views/CustomersView.vue'),
   // '/rent/cars': () => import('./views/VehiclesView.vue'),
 }
 
