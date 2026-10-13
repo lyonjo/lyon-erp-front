@@ -19,7 +19,9 @@ export default [
     key: 'customers',
     label: 'Customers',
     links: [
-      link('/customers', 'Customer Black List', 'customers'),
+      link('/customers', 'Customers', 'customers'),
+      link('/customer-companies', 'Companies', 'customer_companies'),
+      link('/customers-black-list', 'Black List', 'customers_black_list'),
       link('/car-rental-price', 'Car Rental Price Customer', 'price_customer'),
       link('/car-rental-price-company', 'Car Rental Price Company', 'price_company'),
     ],
