@@ -39,6 +39,6 @@ export const NATIONALITIES = [
 ]
 
 export const CLIENT_SIDES = [
-  { value: 'local customer', label: 'Local customer' },
-  { value: 'foreign customer', label: 'Foreign customer' },
+  { value: 'local_customer', label: 'Local customer' },
+  { value: 'foreign_customer', label: 'Foreign customer' },
 ]
