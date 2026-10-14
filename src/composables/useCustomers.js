@@ -3,16 +3,17 @@ import api from '@/api'
 
 export function useCustomers() {
   const rows = ref([])
-  const meta = ref({ current_page: 1, last_page: 1, total: 0, per_page: 15 })
+  const meta = ref({ current_page: 1, last_page: 1, total: 0, per_page: 50 })
   const search = ref('')
   const page = ref(1)
+  const perPage = ref(50)
   const loading = ref(false)
 
   let controller = null
   let timer = null
 
   async function fetchCustomers() {
-    controller?.abort()               // cancel the previous in-flight request
+    controller?.abort()
     controller = new AbortController()
     loading.value = true
 
@@ -20,7 +21,7 @@ export function useCustomers() {
       const { data } = await api.get('/rent/customers', {
         params: {
           page: page.value,
-          per_page: meta.value.per_page,
+          per_page: perPage.value,
           search: search.value || undefined,
         },
         signal: controller.signal,
@@ -34,7 +35,6 @@ export function useCustomers() {
     }
   }
 
-  // Debounce typing, and go back to page 1 when the search changes
   watch(search, () => {
     clearTimeout(timer)
     timer = setTimeout(() => {
@@ -43,7 +43,12 @@ export function useCustomers() {
     }, 350)
   })
 
+  watch(perPage, () => {
+    page.value = 1
+    fetchCustomers()
+  })
+
   watch(page, fetchCustomers)
 
-  return { rows, meta, search, page, loading, fetchCustomers }
+  return { rows, meta, search, page, perPage, loading, fetchCustomers }
 }
