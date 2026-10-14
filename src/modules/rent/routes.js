@@ -18,7 +18,17 @@ const children = [
   {
     path: 'customers/create',
     component: () => import('./views/CustomerCreateView.vue'),
-    meta: { permission: 'rent.customers.manage', title: 'New Customer' }, // match your permission name
+    meta: { permission: 'rent.customers.manage', title: 'New Customer' },
+  },
+  {
+    path: 'customers/:id',
+    component: () => import('./views/CustomerShowView.vue'),
+    meta: { permission: 'rent.customers.view', title: 'Customer' },
+  },
+  {
+    path: 'customers/:id/edit',
+    component: () => import('./views/CustomerEditView.vue'),
+    meta: { permission: 'rent.customers.manage', title: 'Edit Customer' },
   },
 ]
 
