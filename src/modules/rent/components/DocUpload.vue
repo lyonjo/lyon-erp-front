@@ -1,34 +1,44 @@
 <script setup>
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   modelValue: { type: File, default: null },
   label: { type: String, required: true },
   error: { type: String, default: '' },
   required: { type: Boolean, default: false },
+  existingUrl: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue'])
 
-const MAX = 5 * 1024 * 1024
+const MAX = 4 * 1024 * 1024
+const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
+
 const input = ref(null)
-const preview = ref('')
+const localPreview = ref('')
 const localError = ref('')
 const dragging = ref(false)
+
+const preview = computed(() => localPreview.value || props.existingUrl)
+const hint = computed(() => {
+  if (localPreview.value)
+    return props.existingUrl ? 'Will replace the current image' : 'Click to change'
+  return 'Click to replace'
+})
 
 watch(
   () => props.modelValue,
   (file) => {
-    if (preview.value) URL.revokeObjectURL(preview.value)
-    preview.value = file ? URL.createObjectURL(file) : ''
+    if (localPreview.value) URL.revokeObjectURL(localPreview.value)
+    localPreview.value = file ? URL.createObjectURL(file) : ''
   },
 )
-onBeforeUnmount(() => preview.value && URL.revokeObjectURL(preview.value))
+onBeforeUnmount(() => localPreview.value && URL.revokeObjectURL(localPreview.value))
 
 function pick(file) {
   localError.value = ''
   if (!file) return
-  if (!file.type.startsWith('image/')) return (localError.value = 'Images only')
-  if (file.size > MAX) return (localError.value = 'Max size is 5MB')
+  if (!ALLOWED.includes(file.type)) return (localError.value = 'Use JPG, PNG or WEBP')
+  if (file.size > MAX) return (localError.value = 'Max size is 4MB')
   emit('update:modelValue', file)
 }
 function onChange(e) {
@@ -47,7 +57,7 @@ function clear() {
 
 <template>
   <div class="doc">
-    <span class="doc-label"> {{ label }}<b v-if="required" class="req"> *</b> </span>
+    <span class="doc-label">{{ label }}<b v-if="required" class="req"> *</b></span>
 
     <div
       class="drop"
@@ -72,16 +82,23 @@ function clear() {
           <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
         </svg>
         <strong>Click or drop to upload</strong>
-        <small>Images only. Max 5MB</small>
+        <small>JPG, PNG, WEBP. Max 4MB</small>
       </template>
 
-      <button v-if="preview" type="button" class="remove" title="Remove" @click.stop="clear">
+      <span v-if="preview" class="hint">{{ hint }}</span>
+      <button v-if="localPreview" type="button" class="remove" title="Undo" @click.stop="clear">
         ×
       </button>
     </div>
 
     <p v-if="localError || error" class="err">{{ localError || error }}</p>
-    <input ref="input" type="file" accept="image/*" hidden @change="onChange" />
+    <input
+      ref="input"
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      hidden
+      @change="onChange"
+    />
   </div>
 </template>
 
@@ -95,6 +112,9 @@ function clear() {
   font-size: 13px;
   font-weight: 500;
   color: #374151;
+}
+.req {
+  color: #dc2626;
 }
 
 .drop {
@@ -141,6 +161,17 @@ function clear() {
   color: #9ca3af;
 }
 
+.hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px 8px;
+  background: rgba(17, 24, 39, 0.6);
+  color: #fff;
+  font-size: 11px;
+  text-align: center;
+}
 .remove {
   position: absolute;
   top: 8px;
@@ -161,9 +192,6 @@ function clear() {
 .err {
   margin: 0;
   font-size: 12px;
-  color: #dc2626;
-}
-.req {
   color: #dc2626;
 }
 </style>
