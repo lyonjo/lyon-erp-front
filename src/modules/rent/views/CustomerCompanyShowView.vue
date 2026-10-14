@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useCustomerCompany } from '@/composables/useCustomerCompany'
 
@@ -8,6 +8,14 @@ const route = useRoute()
 const { company, loading, fetchCustomerCompany } = useCustomerCompany()
 
 onMounted(() => fetchCustomerCompany(route.params.id))
+
+// Watch for route changes (when navigating to same route with different ID)
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId) fetchCustomerCompany(newId)
+  },
+)
 
 const edit = () => router.push(`/rent/customer-companies/${route.params.id}/edit`)
 const back = () => router.push('/rent/customer-companies')

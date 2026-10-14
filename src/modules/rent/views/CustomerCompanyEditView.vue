@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '@/api'
 import CustomerCompanyForm from '../components/CustomerCompanyForm.vue'
@@ -14,6 +14,14 @@ const errors = ref({})
 const banner = ref('')
 
 onMounted(() => fetchCustomerCompany(route.params.id))
+
+// Watch for route changes (when navigating to same route with different ID)
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId) fetchCustomerCompany(newId)
+  },
+)
 
 async function save(fd) {
   saving.value = true
