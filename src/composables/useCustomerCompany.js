@@ -11,7 +11,7 @@ export function useCustomerCompany() {
     error.value = null
     try {
       const { data } = await api.get(`/rent/customer-companies/${id}`)
-      company.value = data
+      company.value = data.data
     } catch (e) {
       error.value = e.response?.data?.message || 'Failed to load company'
       throw e

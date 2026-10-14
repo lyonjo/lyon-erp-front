@@ -37,6 +37,11 @@ const children = [
     meta: { title: 'New Company' },
   },
   {
+    path: 'customer-companies/:id',
+    component: () => import('./views/CustomerCompanyShowView.vue'),
+    meta: { title: 'Company' },
+  },
+  {
     path: 'customer-companies/:id/edit',
     component: () => import('./views/CustomerCompanyEditView.vue'),
     meta: { title: 'Edit Company' },
