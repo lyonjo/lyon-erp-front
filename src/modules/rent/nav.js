@@ -20,7 +20,7 @@ export default [
     label: 'Customers',
     links: [
       link('/customers', 'Customers', 'customers'),
-      link('/customer-companies', 'Companies', 'customer_companies'),
+      link('/customer-companies', 'Companies', null),
       link('/customers-black-list', 'Black List', 'customers_black_list'),
       link('/car-rental-price', 'Car Rental Price Customer', 'price_customer'),
       link('/car-rental-price-company', 'Car Rental Price Company', 'price_company'),
