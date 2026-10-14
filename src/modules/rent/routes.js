@@ -4,6 +4,7 @@ import groups from './nav'
 const pages = {
   '/rent': () => import('./views/DashboardView.vue'),
   '/rent/customers': () => import('./views/CustomersView.vue'),
+  '/rent/customer-companies': () => import('./views/CustomerCompaniesView.vue'),
   // '/rent/cars': () => import('./views/VehiclesView.vue'),
 }
 
@@ -29,6 +30,16 @@ const children = [
     path: 'customers/:id/edit',
     component: () => import('./views/CustomerEditView.vue'),
     meta: { title: 'Edit Customer' },
+  },
+  {
+    path: 'customer-companies/create',
+    component: () => import('./views/CustomerCompanyCreateView.vue'),
+    meta: { title: 'New Company' },
+  },
+  {
+    path: 'customer-companies/:id/edit',
+    component: () => import('./views/CustomerCompanyEditView.vue'),
+    meta: { title: 'Edit Company' },
   },
 ]
 
