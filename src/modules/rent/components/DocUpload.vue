@@ -5,6 +5,7 @@ const props = defineProps({
   modelValue: { type: File, default: null },
   label: { type: String, required: true },
   error: { type: String, default: '' },
+  required: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -46,7 +47,7 @@ function clear() {
 
 <template>
   <div class="doc">
-    <span class="doc-label">{{ label }}</span>
+    <span class="doc-label"> {{ label }}<b v-if="required" class="req"> *</b> </span>
 
     <div
       class="drop"
@@ -160,6 +161,9 @@ function clear() {
 .err {
   margin: 0;
   font-size: 12px;
+  color: #dc2626;
+}
+.req {
   color: #dc2626;
 }
 </style>

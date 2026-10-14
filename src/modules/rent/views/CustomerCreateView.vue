@@ -10,17 +10,17 @@ const router = useRouter()
 /* ---- Field names: match them with CustomerRequest ---- */
 const DOCS = {
   id: [
-    { key: 'id_front', label: 'From The Front' },
-    { key: 'id_back', label: 'From The Back' },
-    { key: 'passport', label: 'Passport Photo' },
+    { key: 'id_front', label: 'From The Front', required: true },
+    { key: 'id_back', label: 'From The Back', required: true },
+    { key: 'passport', label: 'Passport Photo', required: true },
   ],
   license: [
-    { key: 'license_front', label: 'From The Front' },
-    { key: 'license_back', label: 'From The Back' },
+    { key: 'license_front', label: 'From The Front', required: true },
+    { key: 'license_back', label: 'From The Back', required: true },
   ],
 }
 const DOC_KEYS = [...DOCS.id, ...DOCS.license].map((d) => d.key)
-
+const REQUIRED_DOCS = [...DOCS.id, ...DOCS.license].filter((d) => d.required)
 const tabs = [
   { id: 'info', label: 'Customer Info' },
   { id: 'nationality', label: 'Nationality' },
