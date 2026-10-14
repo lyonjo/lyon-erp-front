@@ -125,7 +125,7 @@ async function save() {
           :key="t.id"
           type="button"
           class="tab"
-          :class="{ active: tab === t.id, has-error: tabsWithErrors.has(t.id) }"
+          :class="{ active: tab === t.id }"
           @click="tab = t.id"
         >
           {{ t.label }}
