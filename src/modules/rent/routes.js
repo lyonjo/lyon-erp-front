@@ -5,6 +5,7 @@ const pages = {
   '/rent': () => import('./views/DashboardView.vue'),
   '/rent/customers': () => import('./views/CustomersView.vue'),
   '/rent/customer-companies': () => import('./views/CustomerCompaniesView.vue'),
+  '/rent/customers-black-list': () => import('./views/CustomersBlackListView.vue'),
   // '/rent/cars': () => import('./views/VehiclesView.vue'),
 }
 
