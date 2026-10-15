@@ -189,6 +189,11 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
+        <!-- Language selector: aligned with the navigation actions -->
+        <div class="language-desktop">
+          <LanguageSwitcher />
+        </div>
+
         <!-- Profile -->
         <div class="item" @mouseenter="open('profile')" @mouseleave="scheduleClose('profile')">
           <button type="button" class="round-pill wide" @click="toggle('profile')">
@@ -246,7 +251,10 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <LanguageSwitcher />
+      <!-- Language stays next to the menu button on smaller screens -->
+      <div class="language-mobile">
+        <LanguageSwitcher />
+      </div>
       <!-- Hamburger (small screens) -->
       <button
         type="button"
@@ -344,6 +352,19 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
+.language-desktop {
+  --language-height: 56px;
+  flex: none;
+}
+.language-mobile {
+  --language-height: 40px;
+  margin-inline-start: auto;
+}
+@media (min-width: 1024px) {
+  .language-mobile {
+    display: none;
+  }
+}
 .desktop {
   display: none;
   align-items: center;
@@ -630,6 +651,9 @@ onBeforeUnmount(() => {
 
 /* shrink slightly between 1024 and 1280, like the old navbar */
 @media (min-width: 1024px) and (max-width: 1280px) {
+  .language-desktop {
+    --language-height: 48px;
+  }
   .pill,
   .round-pill {
     height: 48px;
