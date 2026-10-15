@@ -1,4 +1,8 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t, te } = useI18n()
+const tr = (label) => te(`rentUi.${label}`) ? t(`rentUi.${label}`) : label
+
 import { reactive, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import DocUpload from './DocUpload.vue'
@@ -20,22 +24,22 @@ const isEdit = computed(() => props.mode === 'edit')
 /* ---- Field names: match CustomerRequest ---- */
 const DOCS = {
   id: [
-    { key: 'id_front', label: 'From The Front' },
-    { key: 'id_back', label: 'From The Back' },
-    { key: 'passport', label: 'Passport Photo' },
+    { key: 'id_front', label: "From The Front" },
+    { key: 'id_back', label: "From The Back" },
+    { key: 'passport', label: "Passport Photo" },
   ],
   license: [
-    { key: 'license_front', label: 'From The Front' },
-    { key: 'license_back', label: 'From The Back' },
+    { key: 'license_front', label: "From The Front" },
+    { key: 'license_back', label: "From The Back" },
   ],
 }
 const DOC_KEYS = [...DOCS.id, ...DOCS.license].map((d) => d.key)
 
 const tabs = [
-  { id: 'info', label: 'Customer Info' },
-  { id: 'nationality', label: 'Nationality' },
-  { id: 'license', label: 'License' },
-  { id: 'documents', label: 'Uploaded documents' },
+  { id: 'info', label: "Customer Info" },
+  { id: 'nationality', label: "Nationality" },
+  { id: 'license', label: "License" },
+  { id: 'documents', label: "Uploaded documents" },
 ]
 const tab = ref('info')
 
@@ -87,15 +91,16 @@ watch(
 const existingEndpoints = computed(() => {
   const c = props.customer
   if (!c?.id) return {}
-  return Object.fromEntries(
-    DOC_KEYS.map((key) => [key, c.images?.[key] ? `/rent/customers/${c.id}/documents/${key}` : '']),
-  )
+  return Object.fromEntries(DOC_KEYS.map((key) => [
+    key,
+    c.images?.[key] ? `/rent/customers/${c.id}/documents/${key}` : '',
+  ]))
 })
 
 /* ---- Select options (keep a stored value that isn't in the list) ---- */
 const codeOptions = computed(() =>
   form.country_code && !COUNTRY_CODES.some((c) => c.code === form.country_code)
-    ? [{ label: 'Other', code: form.country_code }, ...COUNTRY_CODES]
+    ? [{ label: "Other", code: form.country_code }, ...COUNTRY_CODES]
     : COUNTRY_CODES,
 )
 const nationalityOptions = computed(() =>
@@ -108,15 +113,15 @@ const nationalityOptions = computed(() =>
 const toggles = computed(() => [
   {
     key: 'is_multi_contract',
-    title: 'Multi Contract',
-    text: 'Allow this customer to hold more than one active contract at the same time.',
+    title: "Multi Contract",
+    text: "Allow this customer to hold more than one active contract at the same time.",
   },
   ...(isEdit.value
     ? [
         {
           key: 'is_blacklist',
-          title: 'Black List',
-          text: 'Mark this customer as blacklisted.',
+          title: "Black List",
+          text: "Mark this customer as blacklisted.",
           danger: true,
         },
       ]
@@ -128,33 +133,33 @@ const maxBirth = new Date(Date.now() - 86400000).toISOString().slice(0, 10) // b
 const nationalityFields = [
   {
     key: 'passport_place_of_issue',
-    label: 'Passport Place of Issue',
-    placeholder: 'Enter passport place of issue',
+    label: "Passport Place of Issue",
+    placeholder: "Enter passport place of issue",
     full: true,
   },
-  { key: 'passport_date_of_issue', label: 'Passport Date of Issue', type: 'date' },
+  { key: 'passport_date_of_issue', label: "Passport Date of Issue", type: 'date' },
   {
     key: 'passport_date_of_expire',
-    label: 'Passport Date of Expire',
+    label: "Passport Date of Expire",
     type: 'date',
     minFrom: 'passport_date_of_issue',
   },
-  { key: 'date_of_birth', label: 'Date of Birth', type: 'date', max: maxBirth },
-  { key: 'place_of_birth', label: 'Place of Birth', placeholder: 'Enter place of birth' },
+  { key: 'date_of_birth', label: "Date of Birth", type: 'date', max: maxBirth },
+  { key: 'place_of_birth', label: "Place of Birth", placeholder: "Enter place of birth" },
 ]
 const licenseFields = [
-  { key: 'license_date_of_issue', label: 'License Date of Issue', type: 'date' },
+  { key: 'license_date_of_issue', label: "License Date of Issue", type: 'date' },
   {
     key: 'license_date_of_expire',
-    label: 'License Date of Expire',
+    label: "License Date of Expire",
     type: 'date',
     minFrom: 'license_date_of_issue',
   },
-  { key: 'license_no', label: 'License No.', placeholder: 'Enter license number' },
+  { key: 'license_no', label: "License No.", placeholder: "Enter license number" },
   {
     key: 'license_place_of_issue',
-    label: 'License Place of Issue',
-    placeholder: 'Enter license place of issue',
+    label: "License Place of Issue",
+    placeholder: "Enter license place of issue",
   },
 ]
 
@@ -184,8 +189,8 @@ watch(
 /* ---- Submit ---- */
 function validate() {
   const e = {}
-  if (!form.name.trim()) e.name = ['Customer name is required.']
-  if (!form.client_side) e.client_side = ['Please select a client side.']
+  if (!form.name.trim()) e.name = [tr("Customer name is required.")]
+  if (!form.client_side) e.client_side = [tr("Please select a client side.")]
   return e
 }
 
@@ -216,7 +221,7 @@ function submit() {
   const e = validate()
   if (Object.keys(e).length) {
     localErrors.value = e
-    localBanner.value = 'Please fix the highlighted fields.'
+    localBanner.value = tr("Please fix the highlighted fields.")
     tab.value = 'info'
     return
   }
@@ -233,10 +238,10 @@ const back = () =>
   <div class="page">
     <div class="topbar">
       <button class="back" type="button" @click="back">
-        ← {{ isEdit ? 'Back' : 'Customers' }}
+        ← {{ isEdit ? tr("Back") : tr("Customers") }}
       </button>
       <button class="btn-save" type="button" :disabled="saving" @click="submit">
-        {{ saving ? 'Saving…' : isEdit ? 'Save changes' : 'Save' }}
+        {{ saving ? tr("Saving…") : isEdit ? tr("Save changes") : tr("Save") }}
       </button>
     </div>
 
@@ -250,7 +255,7 @@ const back = () =>
           :class="{ active: tab === t.id }"
           @click="tab = t.id"
         >
-          {{ t.label }}
+          {{ tr(t.label) }}
           <i v-if="tabsWithErrors.has(t.id)" class="dot" />
         </button>
       </nav>
@@ -261,65 +266,65 @@ const back = () =>
         <!-- Customer info -->
         <section v-show="tab === 'info'" class="grid">
           <label class="field full">
-            <span>Customer Name</span>
+            <span>{{ tr("Customer Name") }}</span>
             <input
               v-model="form.name"
               :class="{ bad: err('name') }"
-              placeholder="Enter customer name"
+              :placeholder="tr('Enter customer name')"
             />
             <small v-if="err('name')">{{ err('name') }}</small>
           </label>
 
           <label class="field full">
-            <span>Email</span>
+            <span>{{ tr("Email") }}</span>
             <input
               v-model="form.email"
               type="email"
               :class="{ bad: err('email') }"
-              placeholder="Enter email"
+              :placeholder="tr('Enter email')"
             />
             <small v-if="err('email')">{{ err('email') }}</small>
           </label>
 
           <label class="field full">
-            <span>Client Side</span>
+            <span>{{ tr("Client Side") }}</span>
             <select v-model="form.client_side" :class="{ bad: err('client_side') }">
-              <option value="" disabled>Select client type</option>
+              <option value="" disabled>{{ tr("Select client type") }}</option>
               <option v-for="c in CLIENT_SIDES" :key="c.value" :value="c.value">
-                {{ c.label }}
+                {{ tr(c.label) }}
               </option>
             </select>
             <small v-if="err('client_side')">{{ err('client_side') }}</small>
           </label>
 
           <label class="field">
-            <span>Country Code</span>
+            <span>{{ tr("Country Code") }}</span>
             <select v-model="form.country_code" :class="{ bad: err('country_code') }">
-              <option value="">Select country</option>
+              <option value="">{{ tr("Select country") }}</option>
               <option v-for="c in codeOptions" :key="c.label" :value="c.code">
-                {{ c.label }} ({{ c.code }})
+                {{ tr(c.label) }} ({{ c.code }})
               </option>
             </select>
             <small v-if="err('country_code')">{{ err('country_code') }}</small>
           </label>
 
           <label class="field">
-            <span>Phone Number</span>
+            <span>{{ tr("Phone Number") }}</span>
             <input
               v-model="form.phone_number"
               type="tel"
               :class="{ bad: err('phone_number') }"
-              placeholder="Enter phone number"
+              :placeholder="tr('Enter phone number')"
             />
             <small v-if="err('phone_number')">{{ err('phone_number') }}</small>
           </label>
 
           <label class="field full">
-            <span>Address (Country - State - Street)</span>
+            <span>{{ tr("Address (Country - State - Street)") }}</span>
             <input
               v-model="form.address"
               :class="{ bad: err('address') }"
-              placeholder="Enter address"
+              :placeholder="tr('Enter address')"
             />
             <small v-if="err('address')">{{ err('address') }}</small>
           </label>
@@ -332,8 +337,8 @@ const back = () =>
             @click="form[t.key] = !form[t.key]"
           >
             <div>
-              <strong>{{ t.title }}</strong>
-              <p>{{ t.text }}</p>
+              <strong>{{ tr(t.title) }}</strong>
+              <p>{{ tr(t.text) }}</p>
             </div>
             <button
               type="button"
@@ -350,9 +355,9 @@ const back = () =>
         <!-- Nationality -->
         <section v-show="tab === 'nationality'" class="grid">
           <label class="field full">
-            <span>Nationality</span>
+            <span>{{ tr("Nationality") }}</span>
             <select v-model="details.nationality" :class="{ bad: err('details.nationality') }">
-              <option value="">Select nationality</option>
+              <option value="">{{ tr("Select nationality") }}</option>
               <option v-for="n in nationalityOptions" :key="n" :value="n">{{ n }}</option>
             </select>
             <small v-if="err('details.nationality')">{{ err('details.nationality') }}</small>
@@ -364,11 +369,11 @@ const back = () =>
             class="field"
             :class="{ full: f.full }"
           >
-            <span>{{ f.label }}</span>
+            <span>{{ tr(f.label) }}</span>
             <input
               v-model="details[f.key]"
               :type="f.type || 'text'"
-              :placeholder="f.placeholder"
+              :placeholder="f.placeholder ? tr(f.placeholder) : undefined"
               :min="f.minFrom ? details[f.minFrom] || undefined : undefined"
               :max="f.max"
               :class="{ bad: err('details.' + f.key) }"
@@ -380,11 +385,11 @@ const back = () =>
         <!-- License -->
         <section v-show="tab === 'license'" class="grid">
           <label v-for="f in licenseFields" :key="f.key" class="field">
-            <span>{{ f.label }}</span>
+            <span>{{ tr(f.label) }}</span>
             <input
               v-model="details[f.key]"
               :type="f.type || 'text'"
-              :placeholder="f.placeholder"
+              :placeholder="f.placeholder ? tr(f.placeholder) : undefined"
               :min="f.minFrom ? details[f.minFrom] || undefined : undefined"
               :class="{ bad: err('details.' + f.key) }"
             />
@@ -395,26 +400,26 @@ const back = () =>
         <!-- Documents -->
         <section v-show="tab === 'documents'" class="docs">
           <div>
-            <h3>ID Photo</h3>
+            <h3>{{ tr("ID Photo") }}</h3>
             <div class="doc-stack">
               <DocUpload
                 v-for="d in DOCS.id"
                 :key="d.key"
                 v-model="files[d.key]"
-                :label="d.label"
+                :label="tr(d.label)"
                 :error="err(d.key)"
                 :existing-endpoint="existingEndpoints[d.key]"
               />
             </div>
           </div>
           <div>
-            <h3>License Photo</h3>
+            <h3>{{ tr("License Photo") }}</h3>
             <div class="doc-stack">
               <DocUpload
                 v-for="d in DOCS.license"
                 :key="d.key"
                 v-model="files[d.key]"
-                :label="d.label"
+                :label="tr(d.label)"
                 :error="err(d.key)"
                 :existing-endpoint="existingEndpoints[d.key]"
               />
