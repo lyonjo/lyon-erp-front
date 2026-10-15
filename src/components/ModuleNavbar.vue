@@ -464,8 +464,21 @@ onBeforeUnmount(() => {
   right: 0;
 }
 .dropdown.profile {
-  min-width: 150px;
+  min-width: 170px;
   text-align: center;
+}
+
+/* In Arabic the profile/products controls are at the left edge.
+   Anchor their menus to that edge so nothing clips outside the viewport. */
+:global(html[dir='rtl']) .dropdown.profile,
+:global(html[dir='rtl']) .dropdown.products {
+  left: 0;
+  right: auto;
+}
+
+/* Long names must fit the menu instead of extending beyond the screen. */
+.dropdown.profile .user {
+  overflow-wrap: anywhere;
 }
 
 .dropdown-item {
