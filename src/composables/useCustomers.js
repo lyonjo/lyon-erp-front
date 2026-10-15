@@ -1,21 +1,34 @@
-import { ref, watch } from 'vue'
+import { ref, watch, onScopeDispose } from 'vue'
 import api from '@/api'
 
 export function useCustomers() {
   const rows = ref([])
-  const meta = ref({ current_page: 1, last_page: 1, total: 0, per_page: 50 })
+  const meta = ref({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    per_page: 50,
+  })
+
   const search = ref('')
   const page = ref(1)
   const perPage = ref(50)
   const loading = ref(false)
+  const error = ref('')
 
   let controller = null
   let timer = null
+  let requestId = 0
 
   async function fetchCustomers() {
     controller?.abort()
-    controller = new AbortController()
+
+    const id = ++requestId
+    const currentController = new AbortController()
+    controller = currentController
+
     loading.value = true
+    error.value = ''
 
     try {
       const { data } = await api.get('/rent/customers', {
@@ -24,31 +37,61 @@ export function useCustomers() {
           per_page: perPage.value,
           search: search.value || undefined,
         },
-        signal: controller.signal,
+        signal: currentController.signal,
       })
+
+      if (id !== requestId || currentController.signal.aborted) return
+
       rows.value = data.data
       meta.value = data.meta
     } catch (e) {
-      if (e.name !== 'CanceledError' && !e.message?.includes('canceled')) throw e
+      if (id !== requestId || currentController.signal.aborted) return
+
+      error.value = e.response?.data?.message || 'Failed to load customers.'
     } finally {
-      loading.value = false
+      if (id === requestId) {
+        loading.value = false
+        controller = null
+      }
     }
   }
 
   watch(search, () => {
     clearTimeout(timer)
+
     timer = setTimeout(() => {
-      page.value = 1
-      fetchCustomers()
+      if (page.value !== 1) {
+        page.value = 1
+      } else {
+        fetchCustomers()
+      }
     }, 350)
   })
 
   watch(perPage, () => {
-    page.value = 1
-    fetchCustomers()
+    if (page.value !== 1) {
+      page.value = 1
+    } else {
+      fetchCustomers()
+    }
   })
 
   watch(page, fetchCustomers)
 
-  return { rows, meta, search, page, perPage, loading, fetchCustomers }
+  onScopeDispose(() => {
+    clearTimeout(timer)
+    controller?.abort()
+    requestId++
+  })
+
+  return {
+    rows,
+    meta,
+    search,
+    page,
+    perPage,
+    loading,
+    error,
+    fetchCustomers,
+  }
 }
