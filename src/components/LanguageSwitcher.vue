@@ -1,129 +1,326 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { setAppLocale } from '@/i18n'
 
-const { locale, t } = useI18n({ useScope: 'global' })
-const selected = computed({
-  get: () => locale.value,
-  set: (value) => setAppLocale(value),
+const { locale } = useI18n()
+
+const isOpen = ref(false)
+const root = ref(null)
+
+const languages = [
+  { code: 'en', label: 'English', short: 'EN' },
+  { code: 'ar', label: 'العربية', short: 'AR' },
+]
+
+const currentLanguage = computed(
+  () => languages.find((l) => l.code === locale.value) || languages[0],
+)
+
+function selectLanguage(code) {
+  locale.value = code
+  document.documentElement.lang = code
+  document.documentElement.dir = code === 'ar' ? 'rtl' : 'ltr'
+  isOpen.value = false
+}
+
+function toggleDropdown() {
+  isOpen.value = !isOpen.value
+}
+
+function handleClickOutside(event) {
+  if (root.value && !root.value.contains(event.target)) {
+    isOpen.value = false
+  }
+}
+
+function handleKeydown(event) {
+  if (event.key === 'Escape') {
+    isOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+  document.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
 <template>
-  <label class="language-switcher">
-    <span class="sr-only">{{ t('common.language') }}</span>
-    <svg
-      class="globe"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.7"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
+  <div ref="root" class="language-switcher">
+    <button
+      type="button"
+      class="language-trigger"
+      :aria-expanded="isOpen"
+      aria-haspopup="true"
+      aria-label="Select language"
+      @click="toggleDropdown"
     >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M3 12h18M12 3c-4 4-4 14 0 18M12 3c4 4 4 14 0 18" />
-    </svg>
-    <select v-model="selected" :aria-label="t('common.language')">
-      <option value="en">English</option>
-      <option value="ar">العربية</option>
-    </select>
-    <svg
-      class="chevron"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  </label>
+      <svg
+        class="globe-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18" />
+        <path d="M12 3a15 15 0 0 1 0 18" />
+        <path d="M12 3a15 15 0 0 0 0 18" />
+      </svg>
+
+      <span class="language-label">
+        {{ currentLanguage.label }}
+      </span>
+
+      <svg
+        class="chevron"
+        :class="{ rotated: isOpen }"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </button>
+
+    <div v-if="isOpen" class="language-menu" dir="ltr">
+      <div class="menu-title">
+        {{ locale === 'ar' ? 'اختر اللغة' : 'Select Language' }}
+      </div>
+
+      <button
+        v-for="language in languages"
+        :key="language.code"
+        type="button"
+        class="language-option"
+        :class="{ selected: locale === language.code }"
+        @click="selectLanguage(language.code)"
+      >
+        <span class="language-short">
+          {{ language.short }}
+        </span>
+
+        <span class="option-label" :dir="language.code === 'ar' ? 'rtl' : 'ltr'">
+          {{ language.label }}
+        </span>
+
+        <svg
+          v-if="locale === language.code"
+          class="check-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m5 12 4 4L19 6" />
+        </svg>
+      </button>
+    </div>
+  </div>
 </template>
 
 <style scoped>
 .language-switcher {
-  box-sizing: border-box;
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+/* Main button — matches navbar */
+.language-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: var(--language-height, 56px);
-  min-width: 115px;
-  padding-inline: 13px;
+  gap: 9px;
+  height: 56px;
+  min-width: 130px;
+  padding: 0 17px;
+  border: 0;
   border-radius: 23px;
+
+  background: linear-gradient(to bottom, #d9e8f2, #c3d2de);
   box-shadow:
     0 0 0 1px #c9d5df,
     0 1px 2px rgba(0, 0, 0, 0.05);
-  background: linear-gradient(to bottom, #d9e8f2, #c3d2de);
+
   color: #1f2937;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: filter 0.15s;
-}
-.language-switcher:hover {
-  filter: brightness(1.03);
-}
-.language-switcher:focus-within {
-  outline: 2px solid #4f93b8;
-  outline-offset: 2px;
-}
-.globe {
-  width: 17px;
-  height: 17px;
-  flex: none;
-}
-.chevron {
-  width: 14px;
-  height: 14px;
-  flex: none;
-  pointer-events: none;
-}
-.language-switcher select {
-  flex: 1;
-  min-width: 0;
-  border: none;
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  text-align: center;
-  direction: ltr;
+
+  transition:
+    filter 0.15s,
+    box-shadow 0.15s;
 }
-.language-switcher option {
-  background: white;
-  color: #1f2937;
+
+.language-trigger:hover {
+  filter: brightness(1.04);
 }
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+
+.language-trigger:focus-visible {
+  outline: 2px solid #4f93b8;
+  outline-offset: 3px;
+}
+
+.globe-icon {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
+.language-label {
   white-space: nowrap;
-  border: 0;
 }
-@media (max-width: 1023px) {
-  .language-switcher {
-    min-width: 103px;
-    padding-inline: 9px;
-    border-radius: 14px;
-    gap: 5px;
+
+.chevron {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.chevron.rotated {
+  transform: rotate(180deg);
+}
+
+/* Custom dropdown */
+.language-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  left: auto;
+  width: 190px;
+  box-sizing: border-box;
+  padding: 8px;
+
+  border: 1px solid #dbe4ec;
+  border-radius: 14px;
+  background: #fff;
+
+  box-shadow:
+    0 12px 32px rgba(31, 41, 55, 0.13),
+    0 2px 6px rgba(31, 41, 55, 0.04);
+
+  z-index: 2000;
+}
+
+.menu-title {
+  padding: 9px 11px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-align: start;
+  border-bottom: 1px solid #edf0f4;
+}
+
+/* Options */
+.language-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 10px;
+  border: 0;
+  border-radius: 9px;
+
+  background: transparent;
+  color: #374151;
+  text-align: start;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.language-option:hover {
+  background: #eaf3f9;
+  color: #2f7099;
+}
+
+.language-option.selected {
+  background: #e5f1f8;
+  color: #2f7099;
+  font-weight: 600;
+}
+
+.language-short {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  flex-shrink: 0;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  background: #f8fafc;
+
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.language-option.selected .language-short {
+  border-color: #c4ddea;
+  background: #d4e8f5;
+  color: #2f7099;
+}
+
+.option-label {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.check-icon {
+  width: 16px;
+  height: 16px;
+  color: #4f93b8;
+  flex-shrink: 0;
+}
+
+/* Positioning in RTL */
+:global(html[dir='rtl']) .language-menu {
+  right: auto;
+  left: 0;
+}
+
+/* Match the compact navbar */
+@media (min-width: 1024px) and (max-width: 1280px) {
+  .language-trigger {
+    height: 48px;
+    border-radius: 20px;
   }
-  .globe {
-    width: 15px;
-    height: 15px;
+}
+
+@media (max-width: 640px) {
+  .language-trigger {
+    height: 40px;
+    min-width: 105px;
+    padding: 0 11px;
+    border-radius: 15px;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .language-menu {
+    width: 175px;
   }
 }
 </style>
