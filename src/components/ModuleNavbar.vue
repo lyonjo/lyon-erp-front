@@ -1,4 +1,7 @@
 <script setup>
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n({ useScope: 'global' })
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -26,7 +29,10 @@ const visibleGroups = computed(() =>
   props.groups
     .map((g) => ({
       ...g,
-      links: g.links.filter((l) => !l.permission || auth.can(l.permission)),
+      label: t(`nav.${g.label}`),
+      links: g.links
+        .filter((l) => !l.permission || auth.can(l.permission))
+        .map((l) => ({ ...l, text: t(`nav.${l.text}`) })),
     }))
     .filter((g) => g.links.length),
 )
@@ -167,7 +173,7 @@ onBeforeUnmount(() => {
             @mouseenter="open('products')"
             @mouseleave="scheduleClose('products')"
           >
-            <div class="drop-title">Switch product</div>
+            <div class="drop-title">{{ t('nav.Switch product') }}</div>
             <button
               v-for="p in products"
               :key="p.key"
@@ -234,12 +240,13 @@ onBeforeUnmount(() => {
                 <path d="M11 8l-4 4 4 4" />
                 <path d="M15 4h5v16h-5" />
               </svg>
-              Log Out
+              {{ t('nav.Log Out') }}
             </button>
           </div>
         </div>
       </div>
 
+      <LanguageSwitcher />
       <!-- Hamburger (small screens) -->
       <button
         type="button"
@@ -308,7 +315,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <button type="button" class="m-logout" @click="logout">Logout</button>
+      <button type="button" class="m-logout" @click="logout">{{ t('nav.Logout') }}</button>
     </div>
   </nav>
 </template>

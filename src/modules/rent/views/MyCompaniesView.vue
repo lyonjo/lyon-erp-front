@@ -1,4 +1,6 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n({ useScope: 'global' })
 import { onMounted, ref } from 'vue'
 import api from '@/api'
 import CompanyModal from '../components/CompanyModal.vue'
@@ -21,7 +23,7 @@ async function load() {
     const { data } = await api.get('/rent/companies')
     companies.value = data.data ?? []
   } catch (e) {
-    error.value = e.response?.data?.message || 'Unable to load companies.'
+    error.value = e.response?.data?.message || t('companies.unableLoad')
   } finally {
     loading.value = false
   }
@@ -58,9 +60,9 @@ async function save(fd) {
   } catch (e) {
     if (e.response?.status === 422) {
       formErrors.value = e.response.data?.errors ?? {}
-      formError.value = e.response.data?.message || 'Please fix the highlighted fields.'
+      formError.value = e.response.data?.message || t('companies.fixFields')
     } else {
-      formError.value = e.response?.data?.message || 'Unable to save company.'
+      formError.value = e.response?.data?.message || t('companies.unableSave')
     }
   } finally {
     saving.value = false
@@ -69,14 +71,14 @@ async function save(fd) {
 
 async function remove(company) {
   if (deletingId.value !== null) return
-  if (!window.confirm(`Delete "${company.name}"? This cannot be undone.`)) return
+  if (!window.confirm(t('companies.deleteConfirm', { name: company.name }))) return
   deletingId.value = company.id
   error.value = ''
   try {
     await api.delete(`/rent/companies/${company.id}`)
     await load()
   } catch (e) {
-    error.value = e.response?.data?.message || 'Unable to delete company.'
+    error.value = e.response?.data?.message || t('companies.unableDelete')
   } finally {
     deletingId.value = null
   }
@@ -86,15 +88,15 @@ async function remove(company) {
 <template>
   <div class="page">
     <div class="heading">
-      <h1>My Companies</h1>
-      <button class="new-button" type="button" @click="add">+ New Company</button>
+      <h1>{{ t('companies.title') }}</h1>
+      <button class="new-button" type="button" @click="add">{{ t('companies.new') }}</button>
     </div>
     <div v-if="error" class="error" role="alert">
-      {{ error }} <button type="button" @click="load">Retry</button>
+      {{ error }} <button type="button" @click="load">{{ t('common.retry') }}</button>
     </div>
-    <p v-if="loading && !companies.length" class="state">Loading companies…</p>
+    <p v-if="loading && !companies.length" class="state">{{ t('companies.loading') }}</p>
     <p v-else-if="!loading && !companies.length && !error" class="state">
-      No companies yet. Select “New Company” to add one.
+      {{ t('companies.empty') }}
     </p>
     <div class="cards" :class="{ muted: loading }">
       <article v-for="company in companies" :key="company.id" class="card">
@@ -104,23 +106,25 @@ async function remove(company) {
             :endpoint="`/rent/companies/${company.id}/logo`"
             :alt="`${company.name} logo`"
           />
-          <span v-else class="no-logo">No logo</span>
+          <span v-else class="no-logo">{{ t('companies.noLogo') }}</span>
           <div class="actions">
-            <button type="button" class="edit" @click="edit(company)">✎ Edit</button>
+            <button type="button" class="edit" @click="edit(company)">
+              ✎ {{ t('companies.edit') }}
+            </button>
             <button
               type="button"
               class="delete"
               :disabled="deletingId !== null"
               @click="remove(company)"
             >
-              {{ deletingId === company.id ? 'Deleting…' : 'Delete' }}
+              {{ deletingId === company.id ? t('companies.deleting') : t('companies.delete') }}
             </button>
           </div>
         </div>
         <div class="details">
           <div class="name" dir="auto">{{ company.name }}</div>
           <div class="location" dir="auto">{{ company.location }}</div>
-          <span v-if="company.is_main" class="main-label">Main Company</span>
+          <span v-if="company.is_main" class="main-label">{{ t('companies.main') }}</span>
         </div>
       </article>
     </div>

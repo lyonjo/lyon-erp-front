@@ -1,4 +1,6 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n({ useScope: 'global' })
 import { ref, computed, watch, onBeforeUnmount, toRef } from 'vue'
 import { useProtectedImage } from '@/composables/useProtectedImage'
 
@@ -27,8 +29,8 @@ const {
 const preview = computed(() => localPreview.value || existingImageUrl.value)
 const hint = computed(() => {
   if (localPreview.value)
-    return props.existingEndpoint ? 'Will replace the current image' : 'Click to change'
-  return props.existingEndpoint ? 'Click to replace' : 'Click to upload'
+    return props.existingEndpoint ? t('images.willReplace') : t('images.change')
+  return props.existingEndpoint ? t('images.replace') : t('images.upload')
 })
 
 watch(
@@ -47,11 +49,11 @@ function pick(file) {
   localError.value = ''
   if (!file) return
   if (!ALLOWED.includes(file.type)) {
-    localError.value = 'Use JPG, PNG or WEBP'
+    localError.value = t('images.invalidType')
     return
   }
   if (file.size > MAX) {
-    localError.value = 'Max size is 4MB'
+    localError.value = t('images.maxSize')
     return
   }
   emit('update:modelValue', file)
@@ -88,8 +90,10 @@ function clear() {
     >
       <img v-if="preview" :src="preview" :alt="label" />
       <template v-else>
-        <span v-if="existingLoading" class="status">Loading image...</span>
-        <span v-else-if="existingError && existingEndpoint" class="status">Image unavailable</span>
+        <span v-if="existingLoading" class="status">{{ t('images.loading') }}</span>
+        <span v-else-if="existingError && existingEndpoint" class="status">{{
+          t('images.unavailable')
+        }}</span>
         <template v-else>
           <svg
             viewBox="0 0 24 24"
@@ -104,8 +108,8 @@ function clear() {
           >
             <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
           </svg>
-          <strong>Click or drop to upload</strong>
-          <small>JPG, PNG, WEBP. Max 4MB</small>
+          <strong>{{ t('images.choose') }}</strong>
+          <small>{{ t('images.uploadHint') }}</small>
         </template>
       </template>
       <span v-if="preview" class="hint">{{ hint }}</span>

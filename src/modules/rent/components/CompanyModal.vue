@@ -1,4 +1,6 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n({ useScope: 'global' })
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import ProtectedImage from '@/components/ProtectedImage.vue'
 
@@ -74,11 +76,11 @@ function selectFile(file) {
   localError.value = ''
   if (!file) return
   if (!ALLOWED.includes(file.type)) {
-    localError.value = 'Upload PNG, JPG, or WEBP only.'
+    localError.value = t('companies.uploadType')
     return
   }
   if (file.size > MAX_BYTES) {
-    localError.value = 'Maximum image size is 4MB.'
+    localError.value = t('companies.uploadSize')
     return
   }
   revokePreview()
@@ -98,11 +100,11 @@ function close() {
 function submit() {
   localError.value = ''
   if (!name.value.trim() || !location.value.trim() || !taxNumber.value.trim()) {
-    localError.value = 'Company name, country/location, and tax number are required.'
+    localError.value = t('companies.requiredFields')
     return
   }
   if (!isEdit.value && !logo.value) {
-    localError.value = 'Company logo is required.'
+    localError.value = t('companies.logoRequired')
     return
   }
   const fd = new FormData()
@@ -121,44 +123,46 @@ function submit() {
       <button type="button" class="dismiss" aria-label="Close" :disabled="saving" @click="close">
         ×
       </button>
-      <h2 id="company-dialog-title">{{ isEdit ? 'Edit Company' : 'Add New Company' }}</h2>
+      <h2 id="company-dialog-title">
+        {{ isEdit ? t('companies.editTitle') : t('companies.addTitle') }}
+      </h2>
       <form @submit.prevent="submit">
         <label class="field">
-          <span>Company Name <b>*</b></span>
+          <span>{{ t('companies.name') }} <b>*</b></span>
           <input
             ref="nameInput"
             v-model="name"
             type="text"
             maxlength="255"
-            placeholder="Enter company name"
+            :placeholder="t('companies.namePlaceholder')"
             required
           />
           <small v-if="errors.name" class="field-error">{{ errors.name[0] }}</small>
         </label>
         <label class="field">
-          <span>Country / Location <b>*</b></span>
+          <span>{{ t('companies.location') }} <b>*</b></span>
           <input
             v-model="location"
             type="text"
             maxlength="255"
-            placeholder="Enter country or location"
+            :placeholder="t('companies.locationPlaceholder')"
             required
           />
           <small v-if="errors.location" class="field-error">{{ errors.location[0] }}</small>
         </label>
         <label class="field">
-          <span>Tax Reg. no <b>*</b></span>
+          <span>{{ t('companies.tax') }} <b>*</b></span>
           <input
             v-model="taxNumber"
             type="text"
             maxlength="100"
-            placeholder="Enter tax registration number"
+            :placeholder="t('companies.taxPlaceholder')"
             required
           />
           <small v-if="errors.tax_number" class="field-error">{{ errors.tax_number[0] }}</small>
         </label>
         <label class="field logo-label">
-          <span>Upload company's logo image <b v-if="!isEdit">*</b></span>
+          <span>{{ t('companies.logo') }} <b v-if="!isEdit">*</b></span>
           <div
             class="drop"
             tabindex="0"
@@ -177,8 +181,8 @@ function submit() {
               alt="Current company logo"
             />
             <template v-else
-              ><span class="upload-symbol">⇧</span><strong>Click to upload</strong
-              ><small>PNG, JPG or WEBP. Max size: 4 MB</small></template
+              ><span class="upload-symbol">⇧</span><strong>{{ t('companies.upload') }}</strong
+              ><small>{{ t('companies.uploadHint') }}</small></template
             >
           </div>
           <input
@@ -190,10 +194,12 @@ function submit() {
           />
           <small v-if="errors.logo" class="field-error">{{ errors.logo[0] }}</small>
         </label>
-        <label class="main-row"><input v-model="isMain" type="checkbox" /> Main Company</label>
+        <label class="main-row"
+          ><input v-model="isMain" type="checkbox" /> {{ t('companies.main') }}</label
+        >
         <p v-if="localError || error" class="notice" role="alert">{{ localError || error }}</p>
         <button class="submit" type="submit" :disabled="saving">
-          {{ saving ? 'Saving…' : isEdit ? 'Save' : 'Add' }}
+          {{ saving ? t('common.saving') : isEdit ? t('common.save') : t('common.add') }}
         </button>
       </form>
     </section>
