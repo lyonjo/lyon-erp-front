@@ -29,7 +29,7 @@ const create = () => router.push('/rent/customers/create')
           <td><span class="badge" :class="row.is_multi_contract ? 'good' : 'bad'">{{ tr(row.is_multi_contract ? 'Yes' : 'No') }}</span></td>
           <td><div class="actions"><button class="action" @click="open(row)">{{ tr('View') }}</button><button class="action" @click="edit(row)">{{ tr('Edit') }}</button></div></td>
         </tr>
-        <tr v-if="!loading && !error && !rows.length"><td class="empty" colspan="6">{{ tr('No companies found' if company else 'No customers found') }}</td></tr>
+        <tr v-if="!loading && !error && !rows.length"><td class="empty" colspan="6">{{ tr('No customers found') }}</td></tr>
       </tbody></table>
     </div>
     <div class="pagination"><button :disabled="loading || page <= 1" @click="page--">{{ tr('Prev') }}</button><span dir="ltr">{{ meta.current_page }} / {{ meta.last_page }} ({{ meta.total }})</span><button :disabled="loading || page >= meta.last_page" @click="page++">{{ tr('Next') }}</button></div>
