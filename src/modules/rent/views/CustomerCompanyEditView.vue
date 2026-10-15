@@ -7,7 +7,7 @@ import { useCustomerCompany } from '@/composables/useCustomerCompany'
 
 const router = useRouter()
 const route = useRoute()
-const { company, loading, fetchCustomerCompany } = useCustomerCompany()
+const { company, loading, error, fetchCustomerCompany } = useCustomerCompany()
 
 const saving = ref(false)
 const errors = ref({})
@@ -57,7 +57,10 @@ async function save(fd) {
     @submit="save"
   />
   <div v-else-if="loading" class="loading">Loading...</div>
-  <div v-else class="error">Failed to load company</div>
+  <div v-else class="error">
+    <p>{{ error || 'Failed to load company.' }}</p>
+    <button type="button" @click="fetchCustomerCompany(route.params.id)">Try again</button>
+  </div>
 </template>
 
 <style scoped>

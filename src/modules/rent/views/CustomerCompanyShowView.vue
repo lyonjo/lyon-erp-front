@@ -5,7 +5,7 @@ import { useCustomerCompany } from '@/composables/useCustomerCompany'
 
 const router = useRouter()
 const route = useRoute()
-const { company, loading, fetchCustomerCompany } = useCustomerCompany()
+const { company, loading, error, fetchCustomerCompany } = useCustomerCompany()
 
 onMounted(() => fetchCustomerCompany(route.params.id))
 
@@ -63,7 +63,10 @@ const back = () => router.push('/rent/customer-companies')
         </div>
       </div>
     </div>
-    <div v-else class="error">Failed to load company</div>
+    <div v-else class="error">
+      <p>{{ error || 'Failed to load company.' }}</p>
+      <button type="button" @click="fetchCustomerCompany(route.params.id)">Try again</button>
+    </div>
   </div>
 </template>
 

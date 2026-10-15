@@ -4,7 +4,8 @@ import { useRouter } from 'vue-router'
 import { useCustomerCompanies } from '@/composables/useCustomerCompanies'
 
 const router = useRouter()
-const { rows, meta, search, page, perPage, loading, fetchCustomerCompanies } = useCustomerCompanies()
+const { rows, meta, search, page, perPage, loading, error, fetchCustomerCompanies } =
+  useCustomerCompanies()
 onMounted(fetchCustomerCompanies)
 
 const view = (c) => router.push(`/rent/customer-companies/${c.id}`)
@@ -57,7 +58,10 @@ const create = () => router.push('/rent/customer-companies/create')
         New Company
       </button>
     </div>
-
+    <div v-if="error" class="api-error" role="alert">
+      <span>{{ error }}</span>
+      <button type="button" @click="fetchCustomerCompanies">Retry</button>
+    </div>
     <!-- Table -->
     <div class="table-card" :class="{ loading }">
       <table>
@@ -318,5 +322,26 @@ tbody tr:hover {
 .pagination span {
   font-size: 14px;
   color: #6b7280;
+}
+.api-error {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+.api-error button {
+  padding: 7px 14px;
+  border: 1px solid #dc2626;
+  border-radius: 6px;
+  background: white;
+  color: #b91c1c;
+  cursor: pointer;
 }
 </style>
