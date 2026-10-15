@@ -3,7 +3,7 @@ import { reactive, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import DocUpload from './DocUpload.vue'
 import { COUNTRY_CODES, NATIONALITIES, CLIENT_SIDES } from '../constants/lookups'
-import { fileUrl, toDate } from '../utils/files'
+import { toDate } from '../utils/files'
 
 const props = defineProps({
   mode: { type: String, default: 'create' }, // 'create' | 'edit'
@@ -84,9 +84,13 @@ watch(
   { immediate: true },
 )
 
-const existing = computed(() =>
-  Object.fromEntries(DOC_KEYS.map((k) => [k, fileUrl(props.customer?.images?.[k])])),
-)
+const existingEndpoints = computed(() => {
+  const c = props.customer
+  if (!c?.id) return {}
+  return Object.fromEntries(
+    DOC_KEYS.map((key) => [key, c.images?.[key] ? `/rent/customers/${c.id}/documents/${key}` : '']),
+  )
+})
 
 /* ---- Select options (keep a stored value that isn't in the list) ---- */
 const codeOptions = computed(() =>
@@ -399,7 +403,7 @@ const back = () =>
                 v-model="files[d.key]"
                 :label="d.label"
                 :error="err(d.key)"
-                :existing-url="existing[d.key]"
+                :existing-endpoint="existingEndpoints[d.key]"
               />
             </div>
           </div>
@@ -412,7 +416,7 @@ const back = () =>
                 v-model="files[d.key]"
                 :label="d.label"
                 :error="err(d.key)"
-                :existing-url="existing[d.key]"
+                :existing-endpoint="existingEndpoints[d.key]"
               />
             </div>
           </div>

@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api'
 import { useAuthStore } from '@/stores/auth'
-import { fileUrl, toDate } from '../utils/files'
+import { toDate } from '../utils/files'
+import ProtectedImage from '@/components/ProtectedImage.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,25 +14,37 @@ const c = ref(null)
 const loading = ref(true)
 const error = ref('')
 
-onMounted(async () => {
-  try {
-    const { data } = await api.get(`/rent/customers/${route.params.id}`)
-    c.value = data.data
-  } catch (e) {
-    error.value =
-      e.response?.status === 404 ? 'Customer not found.' : 'Could not load this customer.'
-  } finally {
-    loading.value = false
-  }
-})
+watch(
+  () => route.params.id,
+  async (id, _oldId, onCleanup) => {
+    const controller = new AbortController()
+    onCleanup(() => controller.abort())
+    c.value = null
+    error.value = ''
+    loading.value = true
+    try {
+      const { data } = await api.get(`/rent/customers/${encodeURIComponent(id)}`, {
+        signal: controller.signal,
+      })
+      if (!controller.signal.aborted) c.value = data.data
+    } catch (e) {
+      if (!controller.signal.aborted) {
+        error.value =
+          e.response?.status === 404 ? 'Customer not found.' : 'Could not load this customer.'
+      }
+    } finally {
+      if (!controller.signal.aborted) loading.value = false
+    }
+  },
+  { immediate: true },
+)
 
 const d = computed(() => c.value?.details ?? {})
-
 const infoRows = computed(() => [
-  ['Email', c.value.email],
-  ['Phone', [c.value.country_code, c.value.phone_number].filter(Boolean).join(' ')],
-  ['Client Side', c.value.client_side_label ?? c.value.client_side],
-  ['Address', c.value.address],
+  ['Email', c.value?.email],
+  ['Phone', [c.value?.country_code, c.value?.phone_number].filter(Boolean).join(' ')],
+  ['Client Side', c.value?.client_side_label ?? c.value?.client_side],
+  ['Address', c.value?.address],
 ])
 const nationalityRows = computed(() => [
   ['Nationality', d.value.nationality],
@@ -64,9 +77,9 @@ const docGroups = [
     ],
   },
 ]
-
 const dash = (v) => (v === null || v === undefined || v === '' ? '—' : v)
-const img = (key) => fileUrl(c.value?.images?.[key])
+const documentEndpoint = (key) =>
+  c.value?.id ? `/rent/customers/${c.value.id}/documents/${key}` : ''
 </script>
 
 <template>
@@ -84,10 +97,8 @@ const img = (key) => fileUrl(c.value?.images?.[key])
         Edit
       </button>
     </div>
-
     <p v-if="loading" class="state">Loading…</p>
     <p v-else-if="error" class="state">{{ error }}</p>
-
     <template v-else-if="c">
       <header class="head">
         <div>
@@ -103,7 +114,6 @@ const img = (key) => fileUrl(c.value?.images?.[key])
           >
         </div>
       </header>
-
       <section class="card">
         <h2>Customer Info</h2>
         <dl class="rows">
@@ -113,7 +123,6 @@ const img = (key) => fileUrl(c.value?.images?.[key])
           </div>
         </dl>
       </section>
-
       <section class="card">
         <h2>Nationality &amp; Passport</h2>
         <dl class="rows">
@@ -123,7 +132,6 @@ const img = (key) => fileUrl(c.value?.images?.[key])
           </div>
         </dl>
       </section>
-
       <section class="card">
         <h2>License</h2>
         <dl class="rows">
@@ -133,7 +141,6 @@ const img = (key) => fileUrl(c.value?.images?.[key])
           </div>
         </dl>
       </section>
-
       <section class="card">
         <h2>Uploaded documents</h2>
         <div class="doc-groups">
@@ -141,9 +148,9 @@ const img = (key) => fileUrl(c.value?.images?.[key])
             <h3>{{ g.title }}</h3>
             <div class="tiles">
               <figure v-for="[label, key] in g.items" :key="key">
-                <a v-if="img(key)" :href="img(key)" target="_blank" rel="noopener" class="tile">
-                  <img :src="img(key)" :alt="label" />
-                </a>
+                <div v-if="c.images?.[key]" class="tile">
+                  <ProtectedImage :endpoint="documentEndpoint(key)" :alt="label" />
+                </div>
                 <div v-else class="tile empty">Not uploaded</div>
                 <figcaption>{{ label }}</figcaption>
               </figure>
@@ -162,7 +169,6 @@ const img = (key) => fileUrl(c.value?.images?.[key])
   max-width: 900px;
   margin: 0 auto;
 }
-
 .topbar {
   display: flex;
   align-items: center;
@@ -198,7 +204,6 @@ const img = (key) => fileUrl(c.value?.images?.[key])
   text-align: center;
   color: #6b7280;
 }
-
 .head {
   display: flex;
   align-items: flex-start;
@@ -236,7 +241,6 @@ const img = (key) => fileUrl(c.value?.images?.[key])
   background: #fee2e2;
   color: #dc2626;
 }
-
 .card {
   border: 1px solid #e5e7eb;
   border-radius: 14px;
@@ -249,7 +253,6 @@ const img = (key) => fileUrl(c.value?.images?.[key])
   font-size: 15px;
   font-weight: 600;
 }
-
 .rows {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -267,7 +270,6 @@ const img = (key) => fileUrl(c.value?.images?.[key])
   color: #111827;
   word-break: break-word;
 }
-
 .doc-groups {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -302,17 +304,11 @@ figcaption {
   background: #fafbfc;
   overflow: hidden;
 }
-.tile img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
 .tile.empty {
   border-style: dashed;
   font-size: 12px;
   color: #9ca3af;
 }
-
 @media (max-width: 640px) {
   .rows,
   .doc-groups {
