@@ -227,18 +227,18 @@ onUnmounted(() => {
   <section class="banks-page" :dir="isArabic ? 'rtl' : 'ltr'">
     <div class="heading">
       <div><h1>{{ t('title') }}</h1><p>{{ t('subtitle') }}</p></div>
-      <button class="primary" type="button" @click="openCreate">+ {{ t('add') }}</button>
+      <button class="btn-new" type="button" @click="openCreate">+ {{ t('add') }}</button>
     </div>
 
     <div class="toolbar">
       <input v-model="searchText" class="search" type="search" :placeholder="t('search')" :aria-label="t('search')" />
-      <select v-model.number="perPage" class="page-size" :aria-label="t('records')">
+      <select v-model.number="perPage" class="selector per-page" :aria-label="t('records')">
         <option v-for="size in [10, 15, 25, 50, 100]" :key="size" :value="size">{{ t('perPage', { n: size }) }}</option>
       </select>
     </div>
 
     <div v-if="error" class="alert" role="alert">{{ error }} <button type="button" @click="fetchBanks">{{ t('retry') }}</button></div>
-    <div class="table-shell" :aria-busy="loading">
+    <div class="table-card" :class="{ loading }" :aria-busy="loading">
       <div class="table-scroll">
         <table>
           <thead><tr>
@@ -251,12 +251,12 @@ onUnmounted(() => {
               <td class="bank-name" dir="auto">{{ bank.name }}</td>
               <td dir="auto">{{ bank.company_name || t('unavailable') }}</td>
               <td><div class="purpose-list">
-                <span v-for="purpose in paymentLabels(bank)" :key="purpose" class="purpose-pill">{{ purpose }}</span>
+                <span v-for="purpose in paymentLabels(bank)" :key="purpose" class="badge purpose-pill">{{ purpose }}</span>
                 <span v-if="!paymentLabels(bank).length" class="muted">{{ t('none') }}</span>
               </div></td>
               <td><div class="actions">
-                <button class="edit-button" type="button" @click="openEdit(bank)">{{ t('edit') }}</button>
-                <button class="delete-button" type="button" :disabled="deletingId === bank.id" @click="deleteBank(bank)">{{ t('delete') }}</button>
+                <button class="action edit-button" type="button" @click="openEdit(bank)">{{ t('edit') }}</button>
+                <button class="action delete-button" type="button" :disabled="deletingId === bank.id" @click="deleteBank(bank)">{{ t('delete') }}</button>
               </div></td>
             </tr>
             <tr v-if="loading && !rows.length"><td class="empty" colspan="5">{{ t('loading') }}</td></tr>
@@ -271,9 +271,9 @@ onUnmounted(() => {
       <button type="button" :disabled="loading || page >= meta.last_page" @click="page++">{{ t('next') }}</button>
     </div>
 
-    <div v-if="isOpen" class="modal-backdrop" @click.self="closeModal">
-      <div class="modal" role="dialog" aria-modal="true" :aria-label="isEditing ? t('editTitle') : t('createTitle')">
-        <div class="modal-top"><h2>{{ isEditing ? t('editTitle') : t('createTitle') }}</h2><button type="button" class="close" :disabled="saving" aria-label="Close" @click="closeModal">×</button></div>
+    <div v-if="isOpen" class="backdrop" @click.self="closeModal">
+      <div class="dialog" role="dialog" aria-modal="true" :aria-label="isEditing ? t('editTitle') : t('createTitle')">
+        <div class="dialog-heading"><h2>{{ isEditing ? t('editTitle') : t('createTitle') }}</h2><button type="button" class="dismiss" :disabled="saving" :aria-label="t('cancel')" @click="closeModal">×</button></div>
         <form @submit.prevent="saveBank">
           <div v-if="formError" class="alert" role="alert">{{ formError }}</div>
           <label class="field"><span>{{ t('bankName') }} <em>*</em></span>
@@ -297,9 +297,9 @@ onUnmounted(() => {
               <span>{{ t(purpose.label) }}</span>
             </label>
           </fieldset>
-          <div class="modal-actions">
+          <div class="dialog-actions">
             <button type="button" class="secondary" :disabled="saving" @click="closeModal">{{ t('cancel') }}</button>
-            <button class="primary" type="submit" :disabled="saving || companyLoading || !!companyError">{{ saving ? t('saving') : t('save') }}</button>
+            <button class="submit" type="submit" :disabled="saving || companyLoading || !!companyError">{{ saving ? t('saving') : t('save') }}</button>
           </div>
         </form>
       </div>
@@ -308,46 +308,59 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.banks-page{padding:24px;max-width:1500px;margin:0 auto;color:#263446;font-family:inherit}
-.heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap}
-h1{font-size:27px;font-weight:750;letter-spacing:-.4px;margin:0 0 5px}
-h2{font-size:20px;margin:0;font-weight:700}
-p{margin:0;color:#77869a;font-size:14px}
+/* Match Customers / Customer Companies table and My Companies modal. */
+.banks-page{padding:8px 4px 40px;color:#1f2937;font-family:inherit}
+.heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 28px;flex-wrap:wrap}
+.heading h1{font-size:32px;font-weight:600;line-height:1.25;margin:0;color:#1e2433}
+.heading p{font-size:13px;color:#6b7280;margin:7px 0 0}
 button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}
-.primary{background:#27658b;color:white;border:1px solid #27658b;border-radius:11px;padding:11px 18px;font-weight:650;white-space:nowrap}
-.primary:hover:not(:disabled){background:#1d5579}
-.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:17px;flex-wrap:wrap}
-.search{height:44px;padding:0 14px;flex:1;min-width:190px;max-width:420px;border-radius:11px;border:1px solid #d5e0e8;background:#fff;outline:0}
-.search:focus,input:focus,select:focus{border-color:#5598c2;outline:2px solid #5598c233;outline-offset:0}
-.page-size{height:44px;padding:0 12px;background:#fff;border:1px solid #d5e0e8;border-radius:11px;color:#32475a}
-.table-shell{background:white;border:1px solid #e5edf3;border-radius:14px;box-shadow:0 5px 20px #283d5008;overflow:hidden}
-.table-scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:790px;text-align:start}
-th{background:#f3f7fa;color:#577187;font-size:12px;text-transform:uppercase;letter-spacing:.3px;font-weight:700}
-th,td{padding:16px 18px;text-align:start;border-bottom:1px solid #edf2f6}tbody tr:last-child td{border-bottom:0}td{font-size:14px}
-.id-cell{font-variant-numeric:tabular-nums;color:#6b7b8d}.bank-name{font-weight:700}
-.purpose-list{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.purpose-pill{display:inline-flex;background:#eaf3f9;color:#2b678d;border:1px solid #d7e9f4;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:600;white-space:nowrap}
-.muted{color:#8794a5}.actions{display:flex;gap:8px;white-space:nowrap}
-.actions button{padding:7px 12px;border-radius:8px;font-size:13px;font-weight:600}
-.edit-button{background:#eaf3fa;color:#25668d;border:1px solid #d8e9f3}
-.delete-button{background:#fff1f0;color:#ba3e37;border:1px solid #f2dad7}
-.empty{padding:42px;text-align:center;color:#7f8c9c}
-.pagination{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:18px;flex-wrap:wrap;color:#63778b;font-size:13px}
-.pagination button,.secondary{border:1px solid #d5e0e8;background:white;color:#425971;border-radius:9px;padding:9px 14px}
-.alert{padding:12px 15px;margin-bottom:14px;background:#fff0ef;border:1px solid #fad2d0;color:#a63c37;border-radius:10px;font-size:13px}
-.alert button{border:0;background:transparent;text-decoration:underline;color:inherit}
-.modal-backdrop{position:fixed;inset:0;z-index:10000;background:#162d408c;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
-.modal{width:min(100%,560px);max-height:calc(100vh - 32px);overflow-y:auto;background:#fff;border-radius:17px;box-shadow:0 24px 70px #0c253e42;padding:24px}
-.modal-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.close{border:0;background:#f0f4f7;color:#526779;border-radius:8px;width:33px;height:33px;font-size:22px}
-.field{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;font-size:13px;font-weight:650}
-.field input,.field select{height:44px;border:1px solid #d5e0e8;border-radius:9px;background:#fff;padding:0 12px;color:#2d3e50}
-.field select:disabled{background:#f3f6f9;color:#93a0ad}
-.field em{color:#c64444;font-style:normal}.field small{color:#c64444}
-.purposes{border:1px solid #e1e8ee;border-radius:11px;padding:15px;margin:4px 0 20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
-.purposes legend{padding:0 5px;font-size:13px;font-weight:700;color:#40586d}
-.checkbox-row{display:flex;gap:10px;align-items:center;font-size:13px;cursor:pointer}
-.checkbox-row input{width:17px;height:17px;accent-color:#27658b;flex-shrink:0}
-.modal-actions{display:flex;justify-content:flex-end;gap:10px}
-@media(max-width:650px){.banks-page{padding:14px}.heading h1{font-size:22px}.modal{padding:18px}.purposes{grid-template-columns:1fr}.pagination{justify-content:center}}
+.btn-new,.submit{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;background:#4f93b8;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-new{padding:10px 22px;white-space:nowrap;box-shadow:0 2px 5px #0001}
+.btn-new:hover:not(:disabled),.submit:hover:not(:disabled){background:#3f83a8}
+.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.search{width:300px;max-width:100%;height:36px;box-sizing:border-box;border:2px solid #9ca3af;border-radius:8px;padding:0 14px;background:#fff;font-size:14px;color:#1f2937}
+.search:focus-visible,.selector:focus-visible,.field input:focus-visible,.field select:focus-visible{outline:2px solid #5c9fc8;outline-offset:2px}
+.selector{height:36px;border:2px solid #d1d5db;border-radius:8px;background:#fff;padding:0 12px;color:#6b7280;font-size:14px}
+.per-page{margin-inline-start:auto}
+.table-card{border:1px solid #e5e7eb;border-radius:14px;background:#fff;overflow:hidden}
+.table-card.loading{opacity:.6}
+.table-scroll{overflow-x:auto}
+table{width:100%;min-width:760px;border-collapse:collapse}
+th,td{padding:14px 16px;text-align:center;font-size:14px;border-bottom:1px solid #eef0f3}
+thead th{color:#9ca3af;background:#fff;font-weight:500;font-size:13px}
+tbody tr:last-child td{border-bottom:0}
+.bank-name{font-weight:600;text-align:start}
+.id-cell{font-variant-numeric:tabular-nums;color:#374151}
+.purpose-list{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}
+.badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;white-space:nowrap}
+.purpose-pill{background:#e0f2fe;color:#2563eb}
+.muted{color:#9ca3af}
+.actions{display:flex;justify-content:center;gap:14px;white-space:nowrap}
+.action{border:0;background:transparent;color:#111827;padding:6px 2px;font-weight:400;font-size:14px}
+.action:hover:not(:disabled){color:#4f93b8}
+.delete-button:hover:not(:disabled){color:#dc2626}
+.empty{padding:32px;text-align:center;color:#6b7280}
+.pagination{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px;color:#6b7280;font-size:13px;flex-wrap:wrap}
+.pagination button,.secondary{padding:8px 16px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151}
+.pagination button:hover:not(:disabled),.secondary:hover:not(:disabled){background:#f8fafc}
+.alert{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding:14px 18px;background:#fef2f2;color:#b91c1c;border-radius:8px;font-size:13px}
+.alert button{padding:7px 12px;border:1px solid #dc2626;border-radius:6px;background:#fff;color:#b91c1c}
+/* Modal: same centered white dialog, close icon, fields and pill submit as My Companies. */
+.backdrop{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.46);display:grid;place-items:center;padding:20px;overflow-y:auto}
+.dialog{position:relative;width:min(100%,512px);box-sizing:border-box;max-height:calc(100vh - 40px);overflow:auto;border-radius:16px;background:#fff;padding:20px 24px 24px;box-shadow:0 12px 35px rgba(0,0,0,.18);color:#202936}
+.dialog-heading{margin:0 0 24px}
+.dialog-heading h2{margin:0;text-align:center;font-size:20px;font-weight:650;padding-inline:26px}
+.dismiss{position:absolute;inset-inline-end:15px;top:10px;border:0;background:transparent;color:#64748b;font-size:25px;line-height:1;cursor:pointer}
+.field{display:flex;flex-direction:column;gap:7px;margin-bottom:17px;font-size:13px;font-weight:600}
+.field input,.field select{box-sizing:border-box;width:100%;height:40px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;padding:0 16px;color:#202936;font-size:14px}
+.field select:disabled{background:#f8fafc;color:#94a3b8}
+.field em{color:#dc2626;font-style:normal}.field small{color:#b91c1c;font-size:12px}
+.purposes{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:4px 0 20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;background:#fafbfc}
+.purposes legend{padding:0 6px;font-size:13px;font-weight:600;color:#1f2937}
+.checkbox-row{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:400;cursor:pointer}
+.checkbox-row input{width:17px;height:17px;flex-shrink:0;accent-color:#5a9ec9}
+.dialog-actions{display:flex;flex-direction:column-reverse;gap:10px;margin-top:8px}
+.dialog-actions .submit{width:100%;min-height:40px;padding:9px 18px}
+.dialog-actions .secondary{width:100%;height:40px;border-radius:999px}
+@media(max-width:650px){.banks-page{padding:8px 4px 32px}.heading h1{font-size:25px}.heading{margin-bottom:24px}.search{width:100%;flex:1 1 220px}.per-page{margin-inline-start:0}.dialog{padding:20px 18px 22px}.purposes{grid-template-columns:1fr}}
 </style>
