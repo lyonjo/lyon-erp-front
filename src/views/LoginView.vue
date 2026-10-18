@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
+import TenantLoginImage from '@/components/TenantLoginImage.vue'
+
 import defaultLogo from '@/assets/logo.png'
 import illustration from '@/assets/login-illustration.png'
 
@@ -18,8 +20,10 @@ const loading = ref(false)
 
 async function submit() {
   if (loading.value) return
+
   error.value = ''
   loading.value = true
+
   try {
     await auth.login(email.value, password.value)
     router.push('/')
@@ -36,17 +40,27 @@ async function submit() {
   <div class="page">
     <section class="left">
       <form class="form" @submit.prevent="submit">
-        <img class="logo" :src="settings.logo || defaultLogo" alt="Logo" />
+        <!-- Tenant logo with default fallback -->
+        <TenantLoginImage
+          slot="logo"
+          :fallback-src="settings.logo || defaultLogo"
+          alt="Logo"
+          class="logo"
+        />
 
         <h1>Hi,<br />Welcome Back</h1>
 
-        <p v-if="settings.error" class="error">{{ settings.error }}</p>
+        <p v-if="settings.error" class="error">
+          {{ settings.error }}
+        </p>
 
         <template v-else>
           <label for="email">User Name</label>
+
           <input id="email" v-model="email" type="email" autocomplete="username" required />
 
           <label for="password">Password</label>
+
           <div class="password">
             <input
               id="password"
@@ -55,6 +69,7 @@ async function submit() {
               autocomplete="current-password"
               required
             />
+
             <button
               type="button"
               class="eye"
@@ -75,6 +90,7 @@ async function submit() {
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
                 <circle cx="12" cy="12" r="3" />
               </svg>
+
               <svg
                 v-else
                 width="20"
@@ -95,9 +111,11 @@ async function submit() {
             </button>
           </div>
 
-          <a href="#" class="forgot" @click.prevent>Forgot password?</a>
+          <a href="#" class="forgot" @click.prevent> Forgot password? </a>
 
-          <p v-if="error" class="error">{{ error }}</p>
+          <p v-if="error" class="error">
+            {{ error }}
+          </p>
 
           <button class="submit" type="submit" :disabled="loading">
             {{ loading ? 'Signing in...' : 'Sign in' }}
@@ -108,7 +126,8 @@ async function submit() {
 
     <section class="right">
       <div class="card">
-        <img :src="illustration" alt="" />
+        <!-- Tenant illustration with default fallback -->
+        <TenantLoginImage slot="illustration" :fallback-src="illustration" alt="" />
       </div>
     </section>
   </div>
@@ -277,6 +296,7 @@ input:focus {
     grid-template-columns: 1fr;
     padding: 24px;
   }
+
   .right {
     display: none;
   }

@@ -9,6 +9,7 @@ const pages = {
   '/rent/companies': () => import('./views/MyCompaniesView.vue'),
   '/rent/admin-logs': () => import('./views/AdminLogsView.vue'),
   '/rent/banks': () => import('./views/BanksView.vue'),
+  '/rent/login-image': () => import('./views/LoginImagesView.vue'),
 }
 
 const children = [
