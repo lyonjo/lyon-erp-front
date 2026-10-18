@@ -1,13 +1,13 @@
 import groups from './nav'
 
-// Real pages replace the placeholder one by one:
+// Add each implemented page here; unimplemented links use PagePlaceholder.
 const pages = {
   '/rent': () => import('./views/DashboardView.vue'),
   '/rent/customers': () => import('./views/CustomersView.vue'),
   '/rent/customer-companies': () => import('./views/CustomerCompaniesView.vue'),
   '/rent/customers-black-list': () => import('./views/CustomersBlackListView.vue'),
   '/rent/companies': () => import('./views/MyCompaniesView.vue'),
-  // '/rent/cars': () => import('./views/VehiclesView.vue'),
+  '/rent/admin-logs': () => import('./views/AdminLogsView.vue'),
 }
 
 const children = [
