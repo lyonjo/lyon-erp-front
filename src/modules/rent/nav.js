@@ -103,6 +103,7 @@ export default [
     label: 'Others',
     links: [
       link('/companies', 'My Companies', 'companies'),
+      { to: '/rent/branches', text: 'My Branches', permission: null },
       link('/suppliers', 'Suppliers', 'suppliers'),
       link('/lawsuits', 'Lawsuits', 'lawsuits'),
       link('/admin-logs', 'Admin Logs', 'admin_logs'),

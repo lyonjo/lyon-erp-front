@@ -10,6 +10,7 @@ const pages = {
   '/rent/admin-logs': () => import('./views/AdminLogsView.vue'),
   '/rent/banks': () => import('./views/BanksView.vue'),
   '/rent/login-image': () => import('./views/LoginImagesView.vue'),
+  '/rent/branches': () => import('./views/MyBranchesView.vue'),
 }
 
 const children = [

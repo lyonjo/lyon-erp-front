@@ -77,6 +77,7 @@ export default {
     'Log Out': 'Log Out',
     Logout: 'Logout',
     User: 'User',
+    'My Branches': 'My Branches',
   },
   companies: {
     title: 'My Companies',

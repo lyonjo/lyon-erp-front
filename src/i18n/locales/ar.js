@@ -77,6 +77,7 @@ export default {
     'Log Out': 'تسجيل الخروج',
     Logout: 'تسجيل الخروج',
     User: 'المستخدم',
+    'My Branches': 'فروعي',
   },
   companies: {
     title: 'شركاتي',
