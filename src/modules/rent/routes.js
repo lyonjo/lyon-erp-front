@@ -8,6 +8,7 @@ const pages = {
   '/rent/customers-black-list': () => import('./views/CustomersBlackListView.vue'),
   '/rent/companies': () => import('./views/MyCompaniesView.vue'),
   '/rent/admin-logs': () => import('./views/AdminLogsView.vue'),
+  '/rent/banks': () => import('./views/BanksView.vue'),
 }
 
 const children = [

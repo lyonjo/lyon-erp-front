@@ -39,7 +39,7 @@ export default [
     label: 'Financial',
     links: [
       link('/payments', 'Payments', 'payments'),
-      link('/banks', 'Banks', 'banks'),
+      { to: '/rent/banks', text: 'banks' },
       link('/traffic-violations', 'Traffic Violations', 'traffic_violations'),
       link('/extra-money', 'Extra Money', 'extra_money'),
       link('/refunds', 'Refund', 'refunds'),
