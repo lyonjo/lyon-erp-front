@@ -9,7 +9,7 @@ const id=computed(()=>route.params.id),isEdit=computed(()=>!!id.value),readOnly=
 const step=ref(0),loading=ref(false),saving=ref(false),err=ref(''),errors=ref({}),success=ref('')
 const brands=ref([]),models=ref([]),companies=ref([]),branches=ref([]),features=ref([])
 const state=ref(empty())
-function empty(){return {number:'',brand_id:'',model_id:'',model_year:new Date().getFullYear(),company_id:'',branch_id:'',vin_number:'',engine_number:'',registration_number:'',fuel_type:'',passengers_number:4,gearbox_type:'',has_blutooth:false,has_camera:false,license_expiration:'',insurance_expiration:'',current_km:0,odometer:0,status:true,features:[]}}
+function empty(){return {number:'',brand_id:'',model_id:'',model_year:new Date().getFullYear(),company_id:'',branch_id:'',vin_number:'',engine_number:'',engine_size:null,registration_number:'',fuel_type:'',passengers_number:4,gearbox_type:'',has_blutooth:false,has_camera:false,license_expiration:'',insurance_expiration:'',current_km:0,odometer:0,status:true,features:[]}}
 const modelOptions=computed(()=>models.value.filter(m=>String(m.brand_id)===String(state.value.brand_id)))
 watch(()=>state.value.brand_id,()=>{if(state.value.model_id&&!modelOptions.value.some(m=>String(m.id)===String(state.value.model_id)))state.value.model_id=''})
 const branchName=computed(()=>branches.value.find(x=>String(x.id)===String(state.value.branch_id))?.name||'—')
@@ -53,7 +53,7 @@ async function save(){if(readOnly.value)return;saving.value=true;err.value='';er
   <label>{{t('Status','الحالة')}}<select v-model="state.status"><option :value="true">{{t('Active','نشطة')}}</option><option :value="false">{{t('Inactive','غير نشطة')}}</option></select></label>
  </div>
  <div v-show="step===1" class="fields">
-  <label>{{t('Engine Size','حجم المحرك')}}<input disabled :placeholder="t('Not in current schema','غير موجود في جدول المركبات')"/></label>
+  <label>{{t('Engine Size (CC)','حجم المحرك (CC)')}}<input v-model.number="state.engine_size" type="number" min="1" max="65535" step="1" :placeholder="t('Enter engine size','أدخل حجم المحرك')"/></label>
   <label>{{t('Passengers Number','عدد الركاب')}} *<input v-model.number="state.passengers_number" type="number" min="1" max="100"/></label>
   <label>{{t('Fuel Type','نوع الوقود')}} *<select v-model="state.fuel_type"><option value="">{{t('Select Fuel Type','اختر الوقود')}}</option><option v-for="v in ['gasoline','diesel','electric','hyprid']" :key="v" :value="v">{{ v==='hyprid'?t('Hybrid','هجين'):v==='gasoline'?t('Gasoline','بنزين'):v==='diesel'?t('Diesel','ديزل'):t('Electric','كهربائي') }}</option></select></label>
   <label>{{t('Gearbox Type','نوع ناقل الحركة')}} *<select v-model="state.gearbox_type"><option value="">{{t('Select Gearbox','اختر الناقل')}}</option><option value="manual">{{t('Manual','يدوي')}}</option><option value="automatic">{{t('Automatic','أوتوماتيكي')}}</option></select></label>
