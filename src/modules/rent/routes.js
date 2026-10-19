@@ -11,6 +11,7 @@ const pages = {
   '/rent/banks': () => import('./views/BanksView.vue'),
   '/rent/login-image': () => import('./views/LoginImagesView.vue'),
   '/rent/branches': () => import('./views/MyBranchesView.vue'),
+  '/rent/cars': () => import('./views/VehiclesView.vue'),
 }
 
 const children = [
@@ -50,6 +51,21 @@ const children = [
     path: 'customer-companies/:id/edit',
     component: () => import('./views/CustomerCompanyEditView.vue'),
     meta: { title: 'Edit Company' },
+  },
+  {
+    path: 'cars/create',
+    component: () => import('./views/VehicleFormView.vue'),
+    meta: { title: 'New Vehicle' },
+  },
+  {
+    path: 'cars/:id/edit',
+    component: () => import('./views/VehicleFormView.vue'),
+    meta: { title: 'Edit Vehicle' },
+  },
+  {
+    path: 'cars/:id',
+    component: () => import('./views/VehicleFormView.vue'),
+    meta: { title: 'Vehicle Details' },
   },
 ]
 
