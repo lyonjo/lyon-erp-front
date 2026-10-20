@@ -14,6 +14,7 @@ const pages = {
   '/rent/cars': () => import('./views/VehiclesView.vue'),
   '/rent/vehicles-maintenance': () => import('./views/VehicleMaintenancesView.vue'),
   '/rent/vehicles-sold': () => import('./views/SoldCarsView.vue'),
+  '/rent/drivers': () => import('./views/DriversView.vue'),
 }
 
 const children = [
@@ -98,6 +99,21 @@ const children = [
     path: 'vehicles-sold/:id',
     component: () => import('./views/SoldCarsShowView.vue'),
     meta: { title: 'Sold Car Details' },
+  },
+  {
+    path: 'drivers/create',
+    component: () => import('./views/DriverFormView.vue'),
+    meta: { title: 'New Driver' },
+  },
+  {
+    path: 'drivers/:id/edit',
+    component: () => import('./views/DriverFormView.vue'),
+    meta: { title: 'Edit Driver' },
+  },
+  {
+    path: 'drivers/:id',
+    component: () => import('./views/DriverShowView.vue'),
+    meta: { title: 'Driver Details' },
   },
 ]
 
