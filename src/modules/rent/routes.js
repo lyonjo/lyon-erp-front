@@ -12,6 +12,7 @@ const pages = {
   '/rent/login-image': () => import('./views/LoginImagesView.vue'),
   '/rent/branches': () => import('./views/MyBranchesView.vue'),
   '/rent/cars': () => import('./views/VehiclesView.vue'),
+  '/rent/vehicles-maintenance': () => import('./views/VehicleMaintenancesView.vue'),
 }
 
 const children = [
@@ -66,6 +67,16 @@ const children = [
     path: 'cars/:id',
     component: () => import('./views/VehicleFormView.vue'),
     meta: { title: 'Vehicle Details' },
+  },
+  {
+    path: 'vehicles-maintenance/create',
+    component: () => import('./views/VehicleMaintenanceFormView.vue'),
+    meta: { title: 'Add Vehicles Maintenance' },
+  },
+  {
+    path: 'vehicles-maintenance/:id/edit',
+    component: () => import('./views/VehicleMaintenanceFormView.vue'),
+    meta: { title: 'Edit Vehicles Maintenance' },
   },
 ]
 
