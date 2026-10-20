@@ -23,6 +23,7 @@ async function load() {
   const r = ++revision
   loading.value = true
   error.value = ''
+  rows.value = []
   try {
     const { data } = await api.get('/rent/car-rental-prices', {
       params: {
@@ -34,7 +35,12 @@ async function load() {
     })
     if (r !== revision) return
     rows.value = data.data || []
-    await Promise.all(
+    meta.value = data.meta || {
+      current_page: data.current_page || 1,
+      last_page: data.last_page || 1,
+      total: data.total || 0,
+    }
+    Promise.all(
       rows.value
         .filter((x) => x.main_image)
         .map(async (x) => {
@@ -49,12 +55,7 @@ async function load() {
             imageBlobs.value[x.id] = URL.createObjectURL(result.data)
           } catch (e) {}
         }),
-    )
-    meta.value = data.meta || {
-      current_page: data.current_page || 1,
-      last_page: data.last_page || 1,
-      total: data.total || 0,
-    }
+    ).catch(() => {})
   } catch (e) {
     if (r === revision)
       error.value = e.response?.data?.message || tr('Could not load prices', 'تعذر تحميل الأسعار')
@@ -99,13 +100,13 @@ function imageUrl(row) {
   return imageBlobs.value[row.id] || ''
 }
 function goCreate() {
-  router.push('/rent/car-rental-price-customer/create')
+  router.push('/rent/car-rental-price/create')
 }
 function goView(row) {
-  router.push('/rent/car-rental-price-customer/' + row.id)
+  router.push('/rent/car-rental-price/' + row.id)
 }
 function goEdit(row) {
-  router.push('/rent/car-rental-price-customer/' + row.id + '/edit')
+  router.push('/rent/car-rental-price/' + row.id + '/edit')
 }
 function openDelete(row) {
   pendingDelete.value = row
@@ -162,7 +163,7 @@ function nextPage() {
           <tr v-if="loading">
             <td colspan="6" class="center">{{ tr('Loading...', 'جاري التحميل...') }}</td>
           </tr>
-          <tr v-for="r in rows" :key="r.id">
+          <tr v-for="r in !loading ? rows : []" :key="r.id">
             <td>{{ r.id }}</td>
             <td>
               <img v-if="imageUrl(r)" :src="imageUrl(r)" alt="" class="thumb" /><span v-else
@@ -178,7 +179,7 @@ function nextPage() {
               ><button class="danger" @click="openDelete(r)">▤ {{ tr('Delete', 'حذف') }}</button>
             </td>
           </tr>
-          <tr v-if="!loading && !rows.length">
+          <tr v-if="!loading && !error && !rows.length">
             <td colspan="6" class="center">{{ tr('No records found', 'لا توجد سجلات') }}</td>
           </tr>
         </tbody>
@@ -247,8 +248,10 @@ function nextPage() {
 }
 .toolbar input,
 .toolbar select {
-  height: 34px;
-  padding: 4px 12px;
+  height: 30px;
+  box-sizing: border-box;
+  font-size: 12px;
+  padding: 3px 9px;
   border: 1px solid #d5dde5;
   border-radius: 8px;
   background: white;

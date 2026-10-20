@@ -146,7 +146,7 @@ const children = [
   {
     path: 'car-rental-price/:id',
     component: () => import('./views/CarRentalPriceFormView.vue'),
-    meta: { title: 'Car Rental Price Details' },
+    meta: { title: 'View Car Rental Price' },
   },
 ]
 

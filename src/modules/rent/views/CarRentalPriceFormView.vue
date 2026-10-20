@@ -84,7 +84,11 @@ async function init() {
   loading.value = true
   error.value = ''
   try {
-    const tasks = [api.get('/rent/car-rental-prices/options')]
+    const tasks = [
+      api.get('/rent/car-rental-prices/options', {
+        params: { client_type: 'customer', ...(id.value ? { include_id: id.value } : {}) },
+      }),
+    ]
     if (id.value) tasks.push(api.get(`/rent/car-rental-prices/${id.value}`))
     const res = await Promise.all(tasks)
     options.value = res[0].data.data || []
@@ -119,6 +123,7 @@ async function init() {
   }
 }
 onMounted(init)
+watch(() => route.fullPath, init)
 watch(search, () => {
   if (selected.value && search.value !== label(selected.value)) selected.value = null
 })
@@ -155,7 +160,7 @@ async function save() {
       isEdit.value ? `/rent/car-rental-prices/${id.value}` : '/rent/car-rental-prices',
       body,
     )
-    router.push('/rent/car-rental-price-customer')
+    router.push('/rent/car-rental-price')
   } catch (e) {
     fieldErrors.value = e.response?.data?.errors || {}
     error.value = e.response?.data?.message || tr('Save failed.', 'تعذر الحفظ.')
@@ -178,7 +183,7 @@ async function save() {
         }}
       </h2>
       <div class="head-actions">
-        <button class="secondary" @click="router.push('/rent/car-rental-price-customer')">
+        <button class="secondary" @click="router.push('/rent/car-rental-price')">
           {{ tr('Back', 'رجوع') }}</button
         ><button
           v-if="!readOnly"
@@ -419,13 +424,14 @@ async function save() {
   display: flex;
   border: 1px solid #d2dae4;
   border-radius: 13px;
-  height: 42px;
+  height: 32px;
   margin-bottom: 22px;
 }
 .vehicle-picker input {
   border: 0;
   background: transparent;
-  padding: 0 16px;
+  padding: 0 12px;
+  font-size: 12px;
   flex: 1;
   min-width: 0;
   outline: none;
