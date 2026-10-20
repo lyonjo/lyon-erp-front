@@ -18,6 +18,7 @@ const pages = {
   '/rent/suppliers': () => import('./views/SuppliersView.vue'),
   '/rent/external-vehicle': () => import('./views/ExternalVehiclesView.vue'),
   '/rent/car-rental-price': () => import('./views/CarRentalPricesView.vue'),
+  '/rent/car-rental-price-company': () => import('./views/CompanyCarRentalPricesView.vue'),
 }
 
 const children = [
@@ -147,6 +148,11 @@ const children = [
     path: 'car-rental-price/:id',
     component: () => import('./views/CarRentalPriceFormView.vue'),
     meta: { title: 'View Car Rental Price' },
+  },
+  {
+    path: 'car-rental-price-company/edit',
+    component: () => import('./views/CompanyCarRentalPriceFormView.vue'),
+    meta: { title: 'Edit Company Rental Price' },
   },
 ]
 
