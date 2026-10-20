@@ -98,14 +98,37 @@ async function deleteRecord() {
 function imageUrl(row) {
   return imageBlobs.value[row.id] || ''
 }
+function goCreate() {
+  router.push('/rent/car-rental-price-customer/create')
+}
+function goView(row) {
+  router.push('/rent/car-rental-price-customer/' + row.id)
+}
+function goEdit(row) {
+  router.push('/rent/car-rental-price-customer/' + row.id + '/edit')
+}
+function openDelete(row) {
+  pendingDelete.value = row
+  deleteError.value = ''
+}
+function closeDelete() {
+  if (!deleting.value) {
+    pendingDelete.value = null
+    deleteError.value = ''
+  }
+}
+function previousPage() {
+  if (page.value > 1 && !loading.value) page.value--
+}
+function nextPage() {
+  if (page.value < (meta.value.last_page || 1) && !loading.value) page.value++
+}
 </script>
 <template>
   <section class="cr-list">
     <div class="top">
       <h2>{{ tr('Car Rental Price Customer', 'أسعار تأجير السيارات للعملاء') }}</h2>
-      <button class="primary" @click="router.push('/rent/car-rental-price-customer/create')">
-        + {{ tr('New Car', 'سيارة جديدة') }}
-      </button>
+      <button class="primary" @click="goCreate">+ {{ tr('New Car', 'سيارة جديدة') }}</button>
     </div>
     <div class="toolbar">
       <input
@@ -150,19 +173,9 @@ function imageUrl(row) {
             <td>{{ r.model?.name || '—' }}</td>
             <td>{{ r.model_year }}</td>
             <td class="actions">
-              <button @click="router.push(`/rent/car-rental-price-customer/${r.id}`)">
-                ◉ {{ tr('View', 'عرض') }}</button
-              ><button @click="router.push(`/rent/car-rental-price-customer/${r.id}/edit`)">
-                ✎ {{ tr('Edit', 'تعديل') }}</button
-              ><button
-                class="danger"
-                @click="
-                  pendingDelete = r
-                  deleteError = ''
-                "
-              >
-                ▤ {{ tr('Delete', 'حذف') }}
-              </button>
+              <button @click="goView(r)">◉ {{ tr('View', 'عرض') }}</button
+              ><button @click="goEdit(r)">✎ {{ tr('Edit', 'تعديل') }}</button
+              ><button class="danger" @click="openDelete(r)">▤ {{ tr('Delete', 'حذف') }}</button>
             </td>
           </tr>
           <tr v-if="!loading && !rows.length">
@@ -173,11 +186,11 @@ function imageUrl(row) {
     </div>
     <div class="pagination">
       <span>{{ meta.total }} {{ tr('records', 'سجل') }}</span
-      ><button :disabled="page <= 1 || loading" @click="page--">‹</button
+      ><button :disabled="page <= 1 || loading" @click="previousPage">‹</button
       ><span>{{ page }} / {{ meta.last_page || 1 }}</span
-      ><button :disabled="page >= (meta.last_page || 1) || loading" @click="page++">›</button>
+      ><button :disabled="page >= (meta.last_page || 1) || loading" @click="nextPage">›</button>
     </div>
-    <div v-if="pendingDelete" class="backdrop" @click.self="!deleting && (pendingDelete = null)">
+    <div v-if="pendingDelete" class="backdrop" @click.self="closeDelete">
       <div class="modal" role="dialog" aria-modal="true">
         <h3>{{ tr('Delete rental pricing record?', 'حذف سجل تسعير التأجير؟') }}</h3>
         <p>
@@ -190,8 +203,7 @@ function imageUrl(row) {
         </p>
         <p v-if="deleteError" class="error">{{ deleteError }}</p>
         <div class="modal-actions">
-          <button :disabled="deleting" @click="pendingDelete = null">
-            {{ tr('Cancel', 'إلغاء') }}</button
+          <button :disabled="deleting" @click="closeDelete">{{ tr('Cancel', 'إلغاء') }}</button
           ><button class="danger-filled" :disabled="deleting" @click="deleteRecord">
             {{ deleting ? tr('Deleting...', 'جاري الحذف...') : tr('Delete', 'حذف') }}
           </button>
