@@ -31,7 +31,13 @@ async function init() {
     car.value = data.data
     periods.value = (car.value.periods || []).map(p => ({
       start_date: String(p.start_date || '').slice(0, 10), end_date: String(p.end_date || '').slice(0, 10),
-      intervals: (p.intervals || []).map(i => ({ start: i.start, end: i.end, price: i.price })),
+      intervals: (p.intervals || []).map(i => ({
+        start: i.start,
+        end: i.end,
+        // Customize: preserve day ranges but start company-specific prices at zero.
+        // Edit: preserve the company's previously saved prices.
+        price: car.value.customized ? i.price : 0,
+      })),
     }))
     if (!periods.value.length) periods.value = [newPeriod()]
     await Promise.all([car.value.main_image, ...(car.value.gallery_images || [])].filter(Boolean).map(loadImage))
@@ -71,7 +77,7 @@ onBeforeUnmount(() => Object.values(imageUrls.value).forEach(URL.revokeObjectURL
     <template v-else-if="car">
       <div class="car-line"><div class="car-name">{{ car.brand?.name }} {{ car.model?.name }} {{ car.model_year }}</div>
         <strong class="company-name">{{ car.company?.name }}</strong></div>
-      <p v-if="!car.customized" class="info">{{ tr('Base customer prices are prefilled. Saving creates pricing for this company only.', 'تم تعبئة أسعار العملاء الأساسية. الحفظ ينشئ تسعيراً خاصاً بهذه الشركة فقط.') }}</p>
+      <p v-if="!car.customized" class="info">{{ tr('Customer pricing dates and day ranges are prefilled. Prices start at 0 for this company.', 'تم تعبئة التواريخ ومدد التأجير من تسعير العملاء، وتبدأ الأسعار لهذه الشركة من صفر.') }}</p>
       <p v-if="error" class="error">{{ error }}</p>
       <p v-for="(msgs, key) in fieldErrors" :key="key" class="error">{{ key }}: {{ msgs.join(', ') }}</p>
       <div class="workspace">
