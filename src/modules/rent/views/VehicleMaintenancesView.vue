@@ -105,7 +105,7 @@ const serviceName = row => ar.value ? row.service_ar : row.service
 h1{font-size:26px;margin:0;font-weight:700}
 .primary{background:#609fc7;border:0;color:white;padding:12px 24px;border-radius:24px;font-weight:600;cursor:pointer;box-shadow:0 3px 8px #0002}
 .toolbar{display:flex;gap:12px;justify-content:flex-end;margin-bottom:20px;flex-wrap:wrap}
-.toolbar input,.toolbar select{border:1px solid #cfd8e5;border-radius:9px;background:white;padding:10px 12px;color:#34445c;min-height:40px}
+.toolbar input,.toolbar select{border:1px solid #cfd8e5;border-radius:9px;background:white;padding:5px 11px;color:#34445c;height:34px;min-height:34px;font-size:13px;box-sizing:border-box}
 .toolbar input{width:min(350px,100%)}
 .table-wrap{border:1px solid #e0e6ef;border-radius:15px;overflow-x:auto}
 table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:13px}th{color:#98a5b8;font-weight:600}th,td{padding:17px 14px;border-bottom:1px solid #e9edf3;text-align:start}tbody tr:last-child td{border-bottom:0}

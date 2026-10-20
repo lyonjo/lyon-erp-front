@@ -16,6 +16,10 @@ const form = ref({ car_id: '', service_key: '', date: today(), price: '', counte
 const services = ref([])
 const vehicles = ref([])
 const vehicleSearch = ref('')
+const selectedVehicle = ref(null)
+const dropdownOpen = ref(false)
+const vehiclePicker = ref(null)
+const activeOption = ref(-1)
 const loadingVehicles = ref(false)
 const saving = ref(false)
 const loading = ref(false)
@@ -23,23 +27,89 @@ const error = ref('')
 const fieldErrors = ref({})
 let timer
 let searchSeq = 0
-const chosenVehicle = computed(() => vehicles.value.find(v => String(v.id) === String(form.value.car_id)))
+let skipNextSearch = false
+
+const vehicleLabel = v => [v.number, v.brand, v.model].filter(value => value !== null && value !== undefined && String(value).trim() !== '').join(' — ')
 
 async function searchVehicles() {
   const seq = ++searchSeq
   loadingVehicles.value = true
   try {
-    const { data } = await api.get('/rent/vehicle-maintenances/vehicle-options', { params: { search: vehicleSearch.value } })
+    const { data } = await api.get('/rent/vehicle-maintenances/vehicle-options', {
+      params: { search: vehicleSearch.value.trim() },
+    })
     if (seq !== searchSeq) return
-    const list = data.data ?? []
-    // Retain the currently selected vehicle when the user changes search text.
-    if (chosenVehicle.value && !list.some(v => String(v.id) === String(chosenVehicle.value.id))) list.unshift(chosenVehicle.value)
-    vehicles.value = list
-  } catch (e) { if (seq === searchSeq) error.value = e.response?.data?.message || t('Cannot load vehicles.', 'تعذر تحميل المركبات.') }
-  finally { if (seq === searchSeq) loadingVehicles.value = false }
+    vehicles.value = data.data ?? []
+    activeOption.value = -1
+  } catch (e) {
+    if (seq === searchSeq) {
+      error.value = e.response?.data?.message || t('Cannot load vehicles.', 'تعذر تحميل المركبات.')
+    }
+  } finally {
+    if (seq === searchSeq) loadingVehicles.value = false
+  }
 }
-watch(vehicleSearch, () => { clearTimeout(timer); timer = setTimeout(searchVehicles, 300) })
-onBeforeUnmount(() => { clearTimeout(timer); ++searchSeq })
+
+watch(vehicleSearch, () => {
+  if (skipNextSearch) { skipNextSearch = false; return }
+  // A typed query is not a confirmed vehicle selection.
+  form.value.car_id = ''
+  selectedVehicle.value = null
+  clearError('car_id')
+  dropdownOpen.value = true
+  clearTimeout(timer)
+  timer = setTimeout(searchVehicles, 250)
+})
+
+function setVehicleInput(text) {
+  skipNextSearch = true
+  vehicleSearch.value = String(text ?? '')
+}
+
+function chooseVehicle(vehicle) {
+  clearTimeout(timer)
+  ++searchSeq
+  loadingVehicles.value = false
+  selectedVehicle.value = vehicle
+  form.value.car_id = vehicle.id
+  setVehicleInput(vehicle.number)
+  dropdownOpen.value = false
+  activeOption.value = -1
+  clearError('car_id')
+}
+
+function openVehicles() {
+  dropdownOpen.value = true
+  if (!vehicles.value.length) searchVehicles()
+}
+
+function onPickerKeydown(e) {
+  if (e.key === 'Escape') {
+    dropdownOpen.value = false
+    activeOption.value = -1
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    dropdownOpen.value = true
+    activeOption.value = Math.min(activeOption.value + 1, vehicles.value.length - 1)
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    activeOption.value = Math.max(activeOption.value - 1, 0)
+  } else if (e.key === 'Enter' && dropdownOpen.value && activeOption.value >= 0) {
+    e.preventDefault()
+    chooseVehicle(vehicles.value[activeOption.value])
+  }
+}
+
+function outsidePicker(e) {
+  if (vehiclePicker.value && !vehiclePicker.value.contains(e.target)) dropdownOpen.value = false
+}
+
+onMounted(() => document.addEventListener('pointerdown', outsidePicker))
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', outsidePicker)
+  clearTimeout(timer)
+  ++searchSeq
+})
 
 async function init() {
   loading.value = true
@@ -51,10 +121,13 @@ async function init() {
       const { data } = await api.get(`/rent/vehicle-maintenances/${id.value}`)
       const r = data.data
       form.value = { car_id: r.car_id, service_key: r.service_key, date: r.date, price: r.price, counter_km: r.counter_km, details: r.details ?? '' }
-      // Current selection may not be among the first 50 returned vehicles.
-      if (!vehicles.value.some(v => String(v.id) === String(r.car_id))) {
-        vehicles.value.unshift({ id: r.car_id, number: r.vehicle_no, brand: r.brand, model: r.model, model_year: r.model_year, company_name: r.company_name })
+      // Keep edit-mode selection even if the vehicle is outside the first 50 options.
+      const existingVehicle = vehicles.value.find(v => String(v.id) === String(r.car_id)) || {
+        id: r.car_id, number: r.vehicle_no, brand: r.brand, model: r.model,
+        model_year: r.model_year, company_name: r.company_name,
       }
+      selectedVehicle.value = existingVehicle
+      setVehicleInput(existingVehicle.number)
     }
   } catch (e) { error.value = e.response?.data?.message || t('Failed to load form.', 'تعذر تحميل النموذج.') }
   finally { loading.value = false }
@@ -85,7 +158,6 @@ async function submit() {
 }
 const firstError = k => fieldErrors.value[k]?.[0] ?? ''
 const serviceLabel = s => ar.value ? s.name_ar : s.name
-const vehicleLabel = v => `${v.number} — ${v.brand ?? ''} ${v.model ?? ''} (${v.model_year ?? ''})`
 </script>
 
 <template>
@@ -99,11 +171,45 @@ const vehicleLabel = v => `${v.number} — ${v.brand ?? ''} ${v.model ?? ''} (${
       <form id="maintenance-form" class="fields" @submit.prevent="submit">
         <div class="field">
           <label for="vehicle-search">{{ t('Vehicle No.', 'رقم المركبة') }} *</label>
-          <input id="vehicle-search" v-model="vehicleSearch" type="search" :placeholder="t('Search vehicle number or model...', 'ابحث برقم المركبة أو الموديل...')" autocomplete="off" />
-          <select v-model="form.car_id" required @change="clearError('car_id')">
-            <option value="" disabled>{{ loadingVehicles ? t('Loading vehicles...', 'جار تحميل المركبات...') : t('Select vehicle', 'اختر المركبة') }}</option>
-            <option v-for="v in vehicles" :key="v.id" :value="v.id">{{ vehicleLabel(v) }}</option>
-          </select>
+          <div ref="vehiclePicker" class="vehicle-picker">
+            <div class="picker-input-wrap">
+              <input
+                id="vehicle-search"
+                v-model="vehicleSearch"
+                type="text"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls="vehicle-option-list"
+                :aria-expanded="dropdownOpen"
+                :placeholder="t('Search vehicle number, brand or model...', 'ابحث برقم المركبة أو الماركة أو الموديل...')"
+                autocomplete="off"
+                required
+                @focus="openVehicles"
+                @keydown="onPickerKeydown"
+              />
+              <button class="picker-toggle" type="button" :aria-label="t('Show vehicles', 'عرض المركبات')" @click="dropdownOpen = !dropdownOpen; if (dropdownOpen && !vehicles.length) searchVehicles()">⌄</button>
+            </div>
+            <div v-if="dropdownOpen" id="vehicle-option-list" role="listbox" class="picker-options">
+              <div v-if="loadingVehicles" class="picker-message">{{ t('Searching vehicles...', 'جار البحث عن المركبات...') }}</div>
+              <template v-else-if="vehicles.length">
+                <button
+                  v-for="(v, index) in vehicles"
+                  :key="v.id"
+                  type="button"
+                  role="option"
+                  class="picker-option"
+                  :class="{ highlighted: index === activeOption, selected: String(form.car_id) === String(v.id) }"
+                  :aria-selected="String(form.car_id) === String(v.id)"
+                  @mousedown.prevent
+                  @click="chooseVehicle(v)"
+                >
+                  <span class="vehicle-number" dir="ltr">{{ v.number }}</span>
+                  <span class="vehicle-description" dir="auto">{{ [v.brand, v.model].filter(Boolean).join(' — ') }}</span>
+                </button>
+              </template>
+              <div v-else class="picker-message">{{ t('No vehicles found', 'لا توجد مركبات مطابقة') }}</div>
+            </div>
+          </div>
           <small v-if="firstError('car_id')" class="error">{{ firstError('car_id') }}</small>
         </div>
         <div class="field">
@@ -124,6 +230,18 @@ const vehicleLabel = v => `${v.number} — ${v.brand ?? ''} ${v.model ?? ''} (${
 .maintenance-form{padding:20px 30px 35px;font-family:'Segoe UI',Arial,sans-serif;color:#15233b}
 .top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:25px}.top h1{font-size:24px;margin:0}.top-actions{display:flex;gap:10px}.back,.primary{border-radius:24px;padding:12px 25px;cursor:pointer;font-weight:600}.back{background:white;color:#24445c;border:1px solid #d3deea}.primary{background:#609fc7;color:white;border:0;box-shadow:0 3px 8px #0002}.primary:disabled{opacity:.6;cursor:default}
 .panel{border:1px solid #dae3ec;border-radius:17px;box-shadow:0 2px 5px #0000000c;padding:26px 22px;background:white}
-.fields{max-width:720px;margin:auto;display:grid;grid-template-columns:1fr;gap:18px}.field{display:flex;flex-direction:column;gap:6px}label{font-size:13px;font-weight:700}.field input,.field select,.field textarea{box-sizing:border-box;width:100%;padding:10px 15px;min-height:42px;border:1px solid #cfd8e5;border-radius:11px;background:white;color:#1b2c43;font:inherit;font-size:14px}.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid #a8cce2;outline-offset:1px}.field textarea{resize:vertical}.error{color:#d23b3b;font-size:13px}#vehicle-search{margin-bottom:5px}
+.fields{max-width:720px;margin:auto;display:grid;grid-template-columns:1fr;gap:18px}.field{display:flex;flex-direction:column;gap:6px}label{font-size:13px;font-weight:700}.field input,.field select,.field textarea{box-sizing:border-box;width:100%;padding:10px 15px;min-height:42px;border:1px solid #cfd8e5;border-radius:11px;background:white;color:#1b2c43;font:inherit;font-size:14px}.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid #a8cce2;outline-offset:1px}.field textarea{resize:vertical}.error{color:#d23b3b;font-size:13px}
+.vehicle-picker{position:relative;width:100%}
+.picker-input-wrap{position:relative}
+#vehicle-search{padding-inline-end:43px;margin:0}
+.picker-toggle{position:absolute;inset-inline-end:5px;top:4px;height:34px;width:34px;border:0;background:transparent;color:#526579;cursor:pointer;font-size:21px}
+.picker-options{position:absolute;top:calc(100% + 5px);inset-inline:0;max-height:250px;overflow-y:auto;background:#fff;border:1px solid #d5dfe9;border-radius:12px;box-shadow:0 10px 25px #15233b21;z-index:30;padding:5px}
+.picker-option{width:100%;display:flex;align-items:center;gap:12px;text-align:start;border:0;border-radius:8px;background:transparent;color:#15233b;padding:11px 13px;font:inherit;font-size:13px;cursor:pointer}
+.picker-option:hover,.picker-option.highlighted{background:#edf5fa}
+.picker-option.selected{background:#e4f0f8}
+.vehicle-number{font-weight:700;min-width:68px;flex-shrink:0}
+.vehicle-description{color:#53657c;min-width:0;overflow-wrap:anywhere}
+.picker-message{padding:14px;color:#7a8899;text-align:center;font-size:13px}
+
 @media(max-width:650px){.maintenance-form{padding:16px}.top{align-items:flex-start;flex-direction:column}.panel{padding:16px}}
 </style>
