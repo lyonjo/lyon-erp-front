@@ -15,6 +15,7 @@ const pages = {
   '/rent/vehicles-maintenance': () => import('./views/VehicleMaintenancesView.vue'),
   '/rent/vehicles-sold': () => import('./views/SoldCarsView.vue'),
   '/rent/drivers': () => import('./views/DriversView.vue'),
+  '/rent/suppliers': () => import('./views/SuppliersView.vue'),
 }
 
 const children = [
