@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
@@ -16,6 +16,9 @@ const search = ref('')
 const page = ref(1)
 const perPage = ref(15)
 const removing = ref(null)
+const deleteTarget = ref(null)
+const deleteError = ref('')
+const deleteDialog = ref(null)
 let requestCounter = 0
 let debounce
 
@@ -39,19 +42,37 @@ async function load() {
 watch(search, () => { clearTimeout(debounce); debounce = setTimeout(() => { page.value = 1; load() }, 350) })
 watch(perPage, () => { page.value = 1; load() })
 watch(page, load)
-onMounted(load)
-onBeforeUnmount(() => { clearTimeout(debounce); ++requestCounter })
+onMounted(() => { load(); document.addEventListener('keydown', onDeleteKeydown) })
+onBeforeUnmount(() => { clearTimeout(debounce); ++requestCounter; document.removeEventListener('keydown', onDeleteKeydown) })
 
-async function removeRecord(record) {
-  if (!window.confirm(t(`Delete maintenance #${record.id}?`, `هل تريد حذف سجل الصيانة رقم ${record.id}؟`))) return
+function openDeleteModal(record) {
+  deleteTarget.value = record
+  deleteError.value = ''
+  nextTick(() => deleteDialog.value?.focus())
+}
+function closeDeleteModal() {
+  if (removing.value !== null) return
+  deleteTarget.value = null
+  deleteError.value = ''
+}
+function onDeleteKeydown(event) {
+  if (event.key === 'Escape') closeDeleteModal()
+}
+async function confirmDelete() {
+  const record = deleteTarget.value
+  if (!record || removing.value !== null) return
   removing.value = record.id
+  deleteError.value = ''
   try {
     await api.delete(`/rent/vehicle-maintenances/${record.id}`)
+    deleteTarget.value = null
     if (records.value.length === 1 && page.value > 1) page.value -= 1
     else await load()
   } catch (e) {
-    error.value = e.response?.data?.message || t('Delete failed.', 'فشل الحذف.')
-  } finally { removing.value = null }
+    deleteError.value = e.response?.data?.message || t('Delete failed. Please try again.', 'فشل الحذف. يرجى المحاولة مرة أخرى.')
+  } finally {
+    removing.value = null
+  }
 }
 const serviceName = row => ar.value ? row.service_ar : row.service
 </script>
@@ -90,7 +111,7 @@ const serviceName = row => ar.value ? row.service_ar : row.service
               <button class="action-link" type="button" @click="router.push(`/rent/vehicles-maintenance/${r.id}/edit`)" :aria-label="t('Edit', 'تعديل')">
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.9 3.5a2.5 2.5 0 0 1 3.5 3.5l-1.4 1.4-3.5-3.5 1.4-1.4ZM14.4 6l3.5 3.5L8 19.4l-4.5 1 1-4.5L14.4 6Z"/></svg>{{ t('Edit', 'تعديل') }}
               </button>
-              <button class="action-link delete-link" type="button" :disabled="removing === r.id" @click="removeRecord(r)" :aria-label="t('Delete', 'حذف')">
+              <button class="action-link delete-link" type="button" :disabled="removing === r.id" @click="openDeleteModal(r)" :aria-label="t('Delete', 'حذف')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>{{ removing === r.id ? t('Deleting...', 'جار الحذف...') : t('Delete', 'حذف') }}
               </button>
             </div></td>
@@ -103,6 +124,23 @@ const serviceName = row => ar.value ? row.service_ar : row.service
       <span dir="ltr">{{ meta.current_page }} / {{ meta.last_page }} · {{ meta.total }} {{ t('records', 'سجل') }}</span>
       <button :disabled="loading || page >= meta.last_page" @click="page++">{{ t('Next', 'التالي') }}</button>
     </footer>
+
+    <div v-if="deleteTarget" class="modal-backdrop" @click.self="closeDeleteModal">
+      <section class="delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-description" tabindex="-1" ref="deleteDialog">
+        <button class="dialog-close" type="button" :disabled="removing !== null" :aria-label="t('Close', 'إغلاق')" @click="closeDeleteModal">×</button>
+        <div class="dialog-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>
+        </div>
+        <h2 id="delete-title">{{ t('Delete maintenance record?', 'حذف سجل الصيانة؟') }}</h2>
+        <p id="delete-description">{{ t('Are you sure you want to delete maintenance record', 'هل أنت متأكد من حذف سجل الصيانة رقم') }} <strong dir="ltr">#{{ deleteTarget.id }}</strong>{{ ar ? '؟' : '?' }}</p>
+        <p class="warning">{{ t('This action cannot be undone.', 'لا يمكن التراجع عن هذا الإجراء.') }}</p>
+        <p v-if="deleteError" class="delete-error" role="alert">{{ deleteError }}</p>
+        <div class="dialog-actions">
+          <button type="button" class="cancel-button" :disabled="removing !== null" @click="closeDeleteModal">{{ t('Cancel', 'إلغاء') }}</button>
+          <button type="button" class="confirm-button" :disabled="removing !== null" @click="confirmDelete">{{ removing !== null ? t('Deleting...', 'جار الحذف...') : t('Delete', 'حذف') }}</button>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -128,4 +166,21 @@ table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:13px}th{c
 .pagination{display:flex;justify-content:center;align-items:center;gap:16px;margin-top:20px;color:#63748c;font-size:13px}.pagination button{background:white;border:1px solid #e1e7ef;border-radius:9px;padding:10px 14px;cursor:pointer}.pagination button:disabled{opacity:.4;cursor:default}
 .error{color:#b91c1c}.error button{margin-inline-start:8px}
 @media(max-width:650px){.maintenance-page{padding:16px}.heading{align-items:flex-start;flex-direction:column}.toolbar{justify-content:stretch}.toolbar input{flex:1}}
+
+.modal-backdrop{position:fixed;inset:0;z-index:3000;background:rgba(18,30,47,.48);display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
+.delete-dialog{position:relative;width:min(440px,100%);background:#fff;border-radius:18px;padding:30px 28px 26px;box-shadow:0 18px 60px rgba(0,0,0,.18);text-align:center;outline:none;box-sizing:border-box}
+.dialog-close{position:absolute;inset-block-start:10px;inset-inline-end:16px;font-size:26px;line-height:1;background:none;border:0;color:#78879a;cursor:pointer}
+.dialog-close:disabled{opacity:.45;cursor:wait}
+.dialog-icon{width:52px;height:52px;border-radius:50%;background:#fff1f2;color:#d22c3b;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+.dialog-icon svg{width:25px;height:25px}
+.delete-dialog h2{font-size:19px;margin:0 0 12px;color:#15233b}
+.delete-dialog p{font-size:14px;line-height:1.65;color:#52627a;margin:0}
+.delete-dialog .warning{font-size:12px;color:#9a6570;margin-top:6px}
+.delete-dialog .delete-error{margin-top:12px;color:#b91c1c}
+.dialog-actions{display:flex;gap:12px;justify-content:center;margin-top:24px}
+.dialog-actions button{flex:1;max-width:180px;min-height:40px;border-radius:999px;font-weight:600;cursor:pointer;font-size:14px}
+.cancel-button{border:1px solid #cfd8e5;background:#fff;color:#253850}
+.confirm-button{background:#d93444;color:white;border:1px solid #d93444}
+.dialog-actions button:disabled{opacity:.65;cursor:wait}
+.dialog-actions button:focus-visible,.dialog-close:focus-visible{outline:2px solid #609fc7;outline-offset:3px}
 </style>
