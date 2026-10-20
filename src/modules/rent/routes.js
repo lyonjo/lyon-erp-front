@@ -78,6 +78,11 @@ const children = [
     component: () => import('./views/VehicleMaintenanceFormView.vue'),
     meta: { title: 'Edit Vehicles Maintenance' },
   },
+  {
+    path: 'vehicles-maintenance/:id',
+    component: () => import('./views/VehicleMaintenanceShowView.vue'),
+    meta: { title: 'Vehicles Maintenance Details' },
+  },
 ]
 
 export default {

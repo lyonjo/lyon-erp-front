@@ -23,6 +23,7 @@ const activeOption = ref(-1)
 const loadingVehicles = ref(false)
 const saving = ref(false)
 const loading = ref(false)
+const loaded = ref(false)
 const error = ref('')
 const fieldErrors = ref({})
 let timer
@@ -112,6 +113,7 @@ onBeforeUnmount(() => {
 })
 
 async function init() {
+  loaded.value = false
   loading.value = true
   error.value = ''
   try {
@@ -130,9 +132,10 @@ async function init() {
       setVehicleInput(existingVehicle.number)
     }
   } catch (e) { error.value = e.response?.data?.message || t('Failed to load form.', 'تعذر تحميل النموذج.') }
-  finally { loading.value = false }
+  finally { loading.value = false; loaded.value = !error.value }
 }
 onMounted(init)
+watch(id, init)
 function clearError(key) { if (fieldErrors.value[key]) delete fieldErrors.value[key] }
 async function submit() {
   if (saving.value) return
@@ -164,9 +167,12 @@ const serviceLabel = s => ar.value ? s.name_ar : s.name
   <div class="maintenance-form">
     <header class="top">
       <h1>{{ editing ? t('Edit Vehicles Maintenance', 'تعديل صيانة المركبة') : t('Add Vehicles Maintenance', 'إضافة صيانة مركبة') }}</h1>
-      <div class="top-actions"><button type="button" class="back" @click="router.push('/rent/vehicles-maintenance')">{{ t('Back', 'رجوع') }}</button><button class="primary" type="submit" form="maintenance-form" :disabled="saving || loading">{{ saving ? t('Saving...', 'جار الحفظ...') : editing ? t('Save', 'حفظ') : t('Add Vehicles Maintenance', 'إضافة صيانة المركبة') }}</button></div>
+      <div class="top-actions"><button type="button" class="back" @click="router.push('/rent/vehicles-maintenance')">{{ t('Back', 'رجوع') }}</button><button class="primary" type="submit" form="maintenance-form" :disabled="saving || loading || !loaded">{{ saving ? t('Saving...', 'جار الحفظ...') : editing ? t('Save', 'حفظ') : t('Add Vehicles Maintenance', 'إضافة صيانة المركبة') }}</button></div>
     </header>
-    <div class="panel">
+    <div class="panel" :aria-busy="loading">
+      <div v-if="loading" class="loading-panel" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span>{{ t('Loading maintenance data...', 'جار تحميل بيانات الصيانة...') }}</div>
+      <div v-else-if="error && !loaded" class="loading-error" role="alert"><p class="error">{{ error }}</p><button type="button" class="back" @click="init">{{ t('Retry', 'إعادة المحاولة') }}</button></div>
+      <template v-else>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <form id="maintenance-form" class="fields" @submit.prevent="submit">
         <div class="field">
@@ -222,6 +228,7 @@ const serviceLabel = s => ar.value ? s.name_ar : s.name
         <div class="field"><label for="km">{{ t('Num of Km', 'عدد الكيلومترات') }} *</label><input id="km" v-model="form.counter_km" type="number" min="0" step="1" required :placeholder="t('Enter number of km', 'أدخل عدد الكيلومترات')" /><small v-if="firstError('counter_km')" class="error">{{ firstError('counter_km') }}</small></div>
         <div class="field"><label for="details">{{ t('Details', 'التفاصيل') }}</label><textarea id="details" v-model="form.details" rows="3" :placeholder="t('Enter details', 'أدخل التفاصيل')" /><small v-if="firstError('details')" class="error">{{ firstError('details') }}</small></div>
       </form>
+      </template>
     </div>
   </div>
 </template>
@@ -243,5 +250,9 @@ const serviceLabel = s => ar.value ? s.name_ar : s.name
 .vehicle-description{color:#53657c;min-width:0;overflow-wrap:anywhere}
 .picker-message{padding:14px;color:#7a8899;text-align:center;font-size:13px}
 
+.loading-panel{min-height:290px;display:flex;align-items:center;justify-content:center;gap:12px;color:#64748b;font-size:14px}
+.loading-error{min-height:210px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.spinner{display:inline-block;width:23px;height:23px;border:3px solid #d9e6ef;border-top-color:#609fc7;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:650px){.maintenance-form{padding:16px}.top{align-items:flex-start;flex-direction:column}.panel{padding:16px}}
 </style>

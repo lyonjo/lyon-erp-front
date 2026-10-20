@@ -84,8 +84,15 @@ const serviceName = row => ar.value ? row.service_ar : row.service
             <td>{{ r.model_year || '—' }}</td><td>{{ r.company_name || '—' }}</td><td>{{ serviceName(r) || '—' }}</td>
             <td dir="ltr">{{ r.date }}</td><td dir="ltr">{{ r.counter_km }}</td>
             <td><div class="actions">
-              <button @click="router.push(`/rent/vehicles-maintenance/${r.id}/edit`)">{{ t('Edit', 'تعديل') }}</button>
-              <button class="danger" :disabled="removing === r.id" @click="removeRecord(r)">{{ t('Delete', 'حذف') }}</button>
+              <button class="action-link" type="button" @click="router.push(`/rent/vehicles-maintenance/${r.id}`)" :aria-label="t('View', 'عرض')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>{{ t('View', 'عرض') }}
+              </button>
+              <button class="action-link" type="button" @click="router.push(`/rent/vehicles-maintenance/${r.id}/edit`)" :aria-label="t('Edit', 'تعديل')">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.9 3.5a2.5 2.5 0 0 1 3.5 3.5l-1.4 1.4-3.5-3.5 1.4-1.4ZM14.4 6l3.5 3.5L8 19.4l-4.5 1 1-4.5L14.4 6Z"/></svg>{{ t('Edit', 'تعديل') }}
+              </button>
+              <button class="action-link delete-link" type="button" :disabled="removing === r.id" @click="removeRecord(r)" :aria-label="t('Delete', 'حذف')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>{{ removing === r.id ? t('Deleting...', 'جار الحذف...') : t('Delete', 'حذف') }}
+              </button>
             </div></td>
           </tr></template>
         </tbody>
@@ -110,7 +117,14 @@ h1{font-size:26px;margin:0;font-weight:700}
 .table-wrap{border:1px solid #e0e6ef;border-radius:15px;overflow-x:auto}
 table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:13px}th{color:#98a5b8;font-weight:600}th,td{padding:17px 14px;border-bottom:1px solid #e9edf3;text-align:start}tbody tr:last-child td{border-bottom:0}
 .empty{text-align:center;color:#94a3b8;padding:46px}
-.actions{display:flex;gap:12px}.actions button{background:none;border:0;color:#18324b;cursor:pointer;font-size:13px}.actions .danger{color:#d13d45}
+.actions{display:flex;align-items:center;gap:14px;white-space:nowrap}
+.actions .action-link{display:inline-flex;align-items:center;gap:4px;padding:3px 0;border:0;background:none;color:#10243c;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;line-height:1.3}
+.actions .action-link svg{width:14px;height:14px;flex-shrink:0}
+.actions .action-link:hover{color:#397eaa}
+.actions .delete-link svg{color:#e22d38}
+.actions .delete-link:hover{color:#bf2030}
+.actions .action-link:focus-visible{outline:2px solid #609fc7;outline-offset:3px;border-radius:2px}
+.actions .action-link:disabled{opacity:.5;cursor:wait}
 .pagination{display:flex;justify-content:center;align-items:center;gap:16px;margin-top:20px;color:#63748c;font-size:13px}.pagination button{background:white;border:1px solid #e1e7ef;border-radius:9px;padding:10px 14px;cursor:pointer}.pagination button:disabled{opacity:.4;cursor:default}
 .error{color:#b91c1c}.error button{margin-inline-start:8px}
 @media(max-width:650px){.maintenance-page{padding:16px}.heading{align-items:flex-start;flex-direction:column}.toolbar{justify-content:stretch}.toolbar input{flex:1}}
