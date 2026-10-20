@@ -17,6 +17,7 @@ const pages = {
   '/rent/drivers': () => import('./views/DriversView.vue'),
   '/rent/suppliers': () => import('./views/SuppliersView.vue'),
   '/rent/external-vehicle': () => import('./views/ExternalVehiclesView.vue'),
+  '/rent/car-rental-price-customer': () => import('./views/CarRentalPricesView.vue'),
 }
 
 const children = [
@@ -131,6 +132,21 @@ const children = [
     path: 'external-vehicle/:id',
     component: () => import('./views/ExternalVehicleFormView.vue'),
     meta: { title: 'External Vehicle Details' },
+  },
+  {
+    path: 'car-rental-price-customer/create',
+    component: () => import('./views/CarRentalPriceFormView.vue'),
+    meta: { title: 'Add Car Rental Price' },
+  },
+  {
+    path: 'car-rental-price-customer/:id/edit',
+    component: () => import('./views/CarRentalPriceFormView.vue'),
+    meta: { title: 'Edit Car Rental Price' },
+  },
+  {
+    path: 'car-rental-price-customer/:id',
+    component: () => import('./views/CarRentalPriceFormView.vue'),
+    meta: { title: 'View Car Rental Price' },
   },
 ]
 
