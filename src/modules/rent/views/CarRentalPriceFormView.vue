@@ -52,6 +52,7 @@ function label(o) {
   return `${o.brand_name} ${o.model_name} ${o.model_year}`
 }
 function pick(o) {
+  if (isEdit.value) return
   selected.value = o
   search.value = label(o)
   open.value = false
@@ -206,12 +207,12 @@ async function save() {
       <div class="vehicle-picker">
         <input
           v-model="search"
-          :disabled="readOnly"
+          :disabled="readOnly || isEdit"
           :placeholder="tr('Search brand, model, year...', 'بحث بالماركة أو الموديل أو السنة...')"
           @focus="open = true"
           @input="open = true"
-        /><button type="button" :disabled="readOnly" @click="open = !open">⌄</button>
-        <div v-if="open && !readOnly" class="options">
+        /><button type="button" :disabled="readOnly || isEdit" @click="open = !open">⌄</button>
+        <div v-if="open && !readOnly && !isEdit" class="options">
           <button
             v-for="(o, i) in filteredOptions"
             :key="`${o.brand_id}-${o.model_id}-${o.model_year}-${i}`"
@@ -426,6 +427,18 @@ async function save() {
   border-radius: 13px;
   height: 32px;
   margin-bottom: 22px;
+}
+.vehicle-picker input:disabled {
+  background: #f3f4f6;
+  color: #64748b;
+  cursor: not-allowed;
+}
+.vehicle-picker > button:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+.vehicle-picker:has(input:disabled) {
+  background: #f3f4f6;
 }
 .vehicle-picker input {
   border: 0;
