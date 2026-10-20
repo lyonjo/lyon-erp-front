@@ -13,6 +13,7 @@ const pages = {
   '/rent/branches': () => import('./views/MyBranchesView.vue'),
   '/rent/cars': () => import('./views/VehiclesView.vue'),
   '/rent/vehicles-maintenance': () => import('./views/VehicleMaintenancesView.vue'),
+  '/rent/vehicles-sold': () => import('./views/SoldCarsView.vue'),
 }
 
 const children = [
@@ -82,6 +83,21 @@ const children = [
     path: 'vehicles-maintenance/:id',
     component: () => import('./views/VehicleMaintenanceShowView.vue'),
     meta: { title: 'Vehicles Maintenance Details' },
+  },
+  {
+    path: 'vehicles-sold/create',
+    component: () => import('./views/SoldCarsFormView.vue'),
+    meta: { title: 'Add Sold Car' },
+  },
+  {
+    path: 'vehicles-sold/:id/edit',
+    component: () => import('./views/SoldCarsFormView.vue'),
+    meta: { title: 'Edit Sold Car' },
+  },
+  {
+    path: 'vehicles-sold/:id',
+    component: () => import('./views/SoldCarsShowView.vue'),
+    meta: { title: 'Sold Car Details' },
   },
 ]
 
