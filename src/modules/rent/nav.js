@@ -110,7 +110,10 @@ export default [
       link('/settings', 'Settings', 'settings'),
       link('/terms-and-conditions', 'Terms and Conditions', 'terms'),
       link('/login-image', 'Edit Login Image', 'login_image'),
-      { to: '/rent/extra-items', label: 'Extra Items' },
+      {
+        labelKey: 'nav.extraItems',
+        to: '/rent/extra-items',
+      },
     ],
   },
 ]
