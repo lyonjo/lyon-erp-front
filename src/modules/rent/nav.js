@@ -111,8 +111,9 @@ export default [
       link('/terms-and-conditions', 'Terms and Conditions', 'terms'),
       link('/login-image', 'Edit Login Image', 'login_image'),
       {
-        labelKey: 'nav.extraItems',
         to: '/rent/extra-items',
+        text: 'Extra Items',
+        permission: null,
       },
     ],
   },
