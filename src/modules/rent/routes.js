@@ -21,6 +21,7 @@ const pages = {
   '/rent/car-rental-price-company': () => import('./views/CompanyCarRentalPricesView.vue'),
   '/rent/settings': () => import('./views/RentSettingsView.vue'),
   '/rent/extra-items': () => import('./views/ExtraItemsView.vue'),
+  '/rent/booking': () => import('./views/BookingsView.vue'),
 }
 
 const children = [
@@ -156,6 +157,8 @@ const children = [
     component: () => import('./views/CompanyCarRentalPriceFormView.vue'),
     meta: { title: 'Edit Company Rental Price' },
   },
+  { path: 'booking/create', component: () => import('./views/BookingRentCreateView.vue') },
+  { path: 'booking/:id', component: () => import('./views/BookingRentShowView.vue') },
 ]
 
 export default {
