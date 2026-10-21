@@ -20,6 +20,7 @@ const pages = {
   '/rent/car-rental-price': () => import('./views/CarRentalPricesView.vue'),
   '/rent/car-rental-price-company': () => import('./views/CompanyCarRentalPricesView.vue'),
   '/rent/settings': () => import('./views/RentSettingsView.vue'),
+  '/rent/extra-items': () => import('./views/ExtraItemsView.vue'),
 }
 
 const children = [

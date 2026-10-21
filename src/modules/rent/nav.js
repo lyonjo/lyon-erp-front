@@ -110,7 +110,7 @@ export default [
       link('/settings', 'Settings', 'settings'),
       link('/terms-and-conditions', 'Terms and Conditions', 'terms'),
       link('/login-image', 'Edit Login Image', 'login_image'),
-      link('/charge-stations', 'Charge Stations', 'charge_stations'),
+      { to: '/rent/extra-items', label: 'Extra Items' },
     ],
   },
 ]
