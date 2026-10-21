@@ -42,9 +42,14 @@ const choices = computed(() =>
     ? options.value.customers
     : options.value.customer_companies,
 )
-const chosenClient = computed(() =>
-  form.value.client_type === 'customer' ? form.value.customer_id : form.value.customer_company_id,
-)
+const chosenClient = computed({
+  get: () =>
+    form.value.client_type === 'customer' ? form.value.customer_id : form.value.customer_company_id,
+  set: (value) => {
+    if (form.value.client_type === 'customer') form.value.customer_id = value
+    else form.value.customer_company_id = value
+  },
+})
 const clientLabel = computed(() =>
   form.value.client_type === 'customer'
     ? tr('Customer', 'العميل')
@@ -167,6 +172,13 @@ async function searchCars() {
     searching.value = false
   }
 }
+function selectCar(vehicle) {
+  selection.value = vehicle
+  form.value.extra_item_ids = []
+}
+function backToBookings() {
+  router.push('/rent/booking')
+}
 function toggleItem(id) {
   const a = form.value.extra_item_ids
   form.value.extra_item_ids = a.includes(id) ? a.filter((x) => x !== id) : [...a, id]
@@ -200,7 +212,7 @@ async function save() {
       <button
         type="button"
         class="br-back"
-        @click="router.push('/rent/booking')"
+        @click="backToBookings"
         :aria-label="tr('Back to bookings', 'العودة إلى الحجوزات')"
       >
         <svg
@@ -245,9 +257,7 @@ async function save() {
         <div class="br-grid">
           <label
             >{{ clientLabel }} *<BookingSearchSelect
-              v-model="
-                form[form.client_type === 'customer' ? 'customer_id' : 'customer_company_id']
-              "
+              v-model="chosenClient"
               :items="choices"
               :placeholder="tr('Search and select...', 'ابحث واختر...')"
           /></label>
@@ -339,13 +349,7 @@ async function save() {
                 <td>{{ money(v.day_price) }}</td>
                 <td>{{ money(v.day_company_price) }}</td>
                 <td>
-                  <button
-                    class="br-small"
-                    @click="
-                      selection = v
-                      form.extra_item_ids = []
-                    "
-                  >
+                  <button class="br-small" type="button" @click="selectCar(v)">
                     {{
                       selection?.car_id === v.car_id
                         ? tr('Selected', 'محددة')
