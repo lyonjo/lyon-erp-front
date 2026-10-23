@@ -22,6 +22,7 @@ const pages = {
   '/rent/settings': () => import('./views/RentSettingsView.vue'),
   '/rent/extra-items': () => import('./views/ExtraItemsView.vue'),
   '/rent/booking': () => import('./views/BookingsView.vue'),
+  '/rent/car-rentered': () => import('./views/ReservationCarsView.vue'),
 }
 
 const children = [
@@ -159,6 +160,7 @@ const children = [
   },
   { path: 'booking/create', component: () => import('./views/BookingRentCreateView.vue') },
   { path: 'booking/:id', component: () => import('./views/BookingRentShowView.vue') },
+  { path: 'car-rentered/:id', component: () => import('./views/ReservationCarDetailsView.vue') },
 ]
 
 export default {

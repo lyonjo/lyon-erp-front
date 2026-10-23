@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
@@ -31,8 +31,6 @@ const form = ref({
   pick_up_branch_id: '',
   return_branch_id: '',
   extra_item_ids: [],
-  is_taxable: false,
-  payment_method: 'cash',
 })
 const selection = ref(null),
   cars = ref([]),
@@ -58,6 +56,9 @@ const clientLabel = computed(() =>
 const pickup = computed(() =>
   options.value.branches.find((x) => String(x.id) === String(form.value.pick_up_branch_id)),
 )
+const dropoff = computed(() =>
+  options.value.branches.find((x) => String(x.id) === String(form.value.return_branch_id)),
+)
 const selectedItems = computed(() =>
   options.value.extra_items.filter((x) => form.value.extra_item_ids.includes(x.id)),
 )
@@ -67,18 +68,17 @@ const extra = computed(() =>
   selectedItems.value.reduce((sum, x) => sum + Number(x.price) * (x.is_daily ? days.value : 1), 0),
 )
 const branchFee = computed(() =>
-  selection.value && pickup.value && String(selection.value.branch_id) !== String(pickup.value.id)
+  selection.value &&
+  pickup.value &&
+  dropoff.value &&
+  String(pickup.value.id) !== String(dropoff.value.id)
     ? 5
     : 0,
 )
 const taxableBase = computed(
   () => (Number(selection.value?.day_price) || 0) * days.value + extra.value,
 )
-const tax = computed(() =>
-  form.value.is_taxable
-    ? Math.round(taxableBase.value * Number(options.value.settings.tax_percent || 0)) / 100
-    : 0,
-)
+const tax = computed(() => 0)
 const total = computed(() => taxableBase.value + tax.value + branchFee.value)
 const companyTotal = computed(
   () =>
@@ -88,6 +88,25 @@ const companyTotal = computed(
     branchFee.value,
 )
 const money = (n) => Number(n || 0).toFixed(2) + ' ' + currency.value
+const imageUrls = ref({})
+const imageObjects = []
+async function fetchThumbnails(rows) {
+  for (const car of rows) {
+    if (!car.image_id) continue
+    try {
+      const { data } = await api.get(
+        `/rent/car-rental-prices/${car.image_price_id || car.car_rental_price_id}/images/${car.image_id}`,
+        { responseType: 'blob' },
+      )
+      const url = URL.createObjectURL(data)
+      imageObjects.push(url)
+      imageUrls.value[car.car_rental_price_id] = url
+    } catch (e) {
+      /* Unavailable image does not hide pricing. */
+    }
+  }
+}
+onBeforeUnmount(() => imageObjects.forEach((url) => URL.revokeObjectURL(url)))
 const dirtySearch = () => {
   selection.value = null
   cars.value = []
@@ -165,6 +184,7 @@ async function searchCars() {
     const { data } = await api.get('/rent/bookings/available-cars', { params: { ...form.value } })
     cars.value = data.data || []
     didSearch.value = true
+    fetchThumbnails(cars.value)
   } catch (e) {
     error.value =
       e.response?.data?.message || tr('Vehicle search failed.', 'فشل البحث عن المركبات.')
@@ -191,7 +211,7 @@ async function save() {
   try {
     await api.post('/rent/bookings', {
       ...form.value,
-      car_id: selection.value.car_id,
+      car_rental_price_id: selection.value.car_rental_price_id,
       customer_id: form.value.client_type === 'customer' ? form.value.customer_id : null,
       customer_company_id:
         form.value.client_type === 'company' ? form.value.customer_company_id : null,
@@ -287,13 +307,6 @@ async function save() {
               <option v-for="b in options.branches" :key="b.id" :value="b.id">{{ b.name }}</option>
             </select></label
           >
-          <label
-            >{{ tr('Payment Method', 'طريقة الدفع')
-            }}<select v-model="form.payment_method">
-              <option value="cash">{{ tr('Cash', 'نقداً') }}</option>
-              <option value="online">{{ tr('Online', 'إلكتروني') }}</option>
-            </select></label
-          >
           <button class="br-primary br-search" :disabled="searching" @click="searchCars">
             {{
               searching ? tr('Searching...', 'جاري البحث...') : tr('Search Cars', 'بحث عن السيارات')
@@ -303,57 +316,55 @@ async function save() {
       </div>
       <div v-if="didSearch || searching" class="br-card br-results">
         <div class="br-section-head">
-          <h3>{{ tr('Available Cars', 'السيارات المتاحة') }}</h3>
-          <small>{{ cars.length }} {{ tr('cars', 'سيارات') }}</small>
+          <h3>{{ tr('Available Car Categories', 'فئات السيارات المتاحة') }}</h3>
+          <small>{{ cars.length }} {{ tr('categories', 'فئات') }}</small>
         </div>
         <div class="br-scroll">
           <table>
             <thead>
               <tr>
-                <th>{{ tr('Vehicle No.', 'رقم السيارة') }}</th>
+                <th>{{ tr('Image', 'الصورة') }}</th>
                 <th>{{ tr('Brand', 'العلامة') }}</th>
                 <th>{{ tr('Model', 'الموديل') }}</th>
                 <th>{{ tr('Year', 'السنة') }}</th>
-                <th>{{ tr('Location', 'الموقع') }}</th>
-                <th>{{ tr('Company', 'الشركة') }}</th>
+                <th>{{ tr('Available Cars', 'السيارات المتاحة') }}</th>
                 <th>{{ tr('Day Price', 'السعر اليومي') }}</th>
-                <th>{{ tr('Company Day Price', 'سعر الشركة') }}</th>
                 <th>{{ tr('Action', 'الإجراء') }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="searching">
-                <td colspan="9" class="br-state">{{ tr('Searching...', 'جاري البحث...') }}</td>
+                <td colspan="7" class="br-state">{{ tr('Searching...', 'جاري البحث...') }}</td>
               </tr>
               <tr v-else-if="!cars.length">
-                <td colspan="9" class="br-state">
-                  {{
-                    tr(
-                      'No available vehicles with matching pricing.',
-                      'لا توجد مركبات متاحة بتسعير مناسب.',
-                    )
-                  }}
+                <td colspan="7" class="br-state">
+                  {{ tr('No available pricing categories.', 'لا توجد فئات متاحة.') }}
                 </td>
               </tr>
               <tr
                 v-for="v in cars"
-                :key="v.car_id"
-                :class="{ 'br-selected': selection?.car_id === v.car_id }"
+                :key="v.car_rental_price_id"
+                :class="{ 'br-selected': selection?.car_rental_price_id === v.car_rental_price_id }"
               >
-                <td>{{ v.number }}</td>
+                <td>
+                  <img
+                    v-if="imageUrls[v.car_rental_price_id]"
+                    :src="imageUrls[v.car_rental_price_id]"
+                    class="br-thumb"
+                    alt="Car"
+                  /><span v-else>—</span>
+                </td>
                 <td>{{ v.brand }}</td>
                 <td>{{ v.model }}</td>
                 <td>{{ v.model_year }}</td>
-                <td>{{ v.current_location }}</td>
-                <td>{{ v.company_name }}</td>
+                <td>{{ v.available_count }}</td>
                 <td>{{ money(v.day_price) }}</td>
-                <td>{{ money(v.day_company_price) }}</td>
                 <td>
                   <button class="br-small" type="button" @click="selectCar(v)">
                     {{
-                      selection?.car_id === v.car_id
+                      selection?.car_rental_price_id === v.car_rental_price_id
                         ? tr('Selected', 'محددة')
-                        : tr('Select Car', 'اختر سيارة')
+                        : tr('Select', 'اختر')
                     }}
                   </button>
                 </td>
@@ -366,10 +377,6 @@ async function save() {
         <div class="br-card">
           <div class="br-section-head">
             <h3>{{ tr('Extra Items', 'الإضافات') }}</h3>
-            <label class="br-tax"
-              ><input v-model="form.is_taxable" type="checkbox" />
-              {{ tr('Taxable', 'خاضع للضريبة') }}</label
-            >
           </div>
           <table>
             <thead>
@@ -418,13 +425,6 @@ async function save() {
             ><strong>{{ money(extra) }}</strong>
           </div>
           <div>
-            <span
-              >{{ tr('Tax', 'الضريبة') }} ({{
-                form.is_taxable ? options.settings.tax_percent : 0
-              }}%)</span
-            ><strong>{{ money(tax) }}</strong>
-          </div>
-          <div>
             <span>{{ tr('Branch Fee', 'رسوم الفرع') }}</span
             ><strong>{{ money(branchFee) }}</strong>
           </div>
@@ -439,8 +439,8 @@ async function save() {
           <p class="br-help">
             {{
               tr(
-                'Branch fee is 5 JOD if pickup differs from the vehicle current branch.',
-                'رسوم الفرع 5 دنانير إذا اختلف فرع الاستلام عن الفرع الحالي للسيارة.',
+                'Branch fee is 5 JOD when pickup and return branches differ.',
+                'رسوم الفرع 5 دنانير عند اختلاف موقع الاستلام عن موقع التسليم.',
               )
             }}
           </p>
@@ -679,5 +679,15 @@ tr.br-selected {
     padding: 8px 12px;
     font-size: 12px;
   }
+}
+</style>
+
+<style scoped>
+.br-thumb {
+  width: 75px;
+  height: 50px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #f5f7fa;
 }
 </style>
