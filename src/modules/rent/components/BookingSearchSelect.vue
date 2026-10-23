@@ -1,62 +1,75 @@
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+
 const props = defineProps({
   modelValue: { type: [String, Number], default: '' },
   items: { type: Array, default: () => [] },
   placeholder: { type: String, default: 'Search...' },
-  disabled: Boolean,
+  disabled: { type: Boolean, default: false },
 })
+
 const emit = defineEmits(['update:modelValue'])
-const search = ref(''),
-  open = ref(false),
-  root = ref(null)
-const selected = computed(() => props.items.find((x) => String(x.id) === String(props.modelValue)))
+const search = ref('')
+const isOpen = ref(false)
+const root = ref(null)
+
+const selected = computed(() =>
+  props.items.find((item) => String(item.id) === String(props.modelValue)),
+)
+
 const filtered = computed(() =>
   props.items
-    .filter((x) =>
-      String(x.name || '')
+    .filter((item) =>
+      String(item.name ?? '')
         .toLowerCase()
         .includes(search.value.toLowerCase()),
     )
     .slice(0, 80),
 )
-watch(
-  () => props.modelValue,
-  () => {
-    if (!open.value) search.value = selected.value?.name || ''
-  },
-  { immediate: true },
-)
-watch(
-  () => props.items,
-  () => {
-    if (!open.value) search.value = selected.value?.name || ''
-  },
-)
+
+function syncSelectedLabel() {
+  if (!isOpen.value) search.value = selected.value?.name ?? ''
+}
+
+watch(() => props.modelValue, syncSelectedLabel, { immediate: true })
+watch(() => props.items, syncSelectedLabel)
+
 function choose(item) {
+  if (props.disabled) return
   emit('update:modelValue', item.id)
   search.value = item.name
-  open.value = false
+  isOpen.value = false
 }
-function input(e) {
-  search.value = e.target.value
-  open.value = true
+
+function onInput(event) {
+  if (props.disabled) return
+  search.value = event.target.value
+  isOpen.value = true
   emit('update:modelValue', '')
 }
-function focus() {
+
+function onFocus() {
   if (props.disabled) return
   search.value = ''
-  open.value = true
+  isOpen.value = true
 }
-function outside(e) {
-  if (root.value && !root.value.contains(e.target)) {
-    open.value = false
-    search.value = selected.value?.name || ''
-  }
+
+function toggleDropdown() {
+  if (props.disabled) return
+  isOpen.value = !isOpen.value
+  search.value = isOpen.value ? '' : (selected.value?.name ?? '')
 }
-onMounted(() => document.addEventListener('click', outside))
-onBeforeUnmount(() => document.removeEventListener('click', outside))
+
+function onOutsideClick(event) {
+  if (!root.value || root.value.contains(event.target)) return
+  isOpen.value = false
+  search.value = selected.value?.name ?? ''
+}
+
+onMounted(() => document.addEventListener('click', onOutsideClick))
+onBeforeUnmount(() => document.removeEventListener('click', onOutsideClick))
 </script>
+
 <template>
   <div ref="root" class="search-select">
     <div class="field">
@@ -64,27 +77,21 @@ onBeforeUnmount(() => document.removeEventListener('click', outside))
         :value="search"
         :placeholder="placeholder"
         :disabled="disabled"
-        @focus="focus"
-        @input="input"
-      /><button
-        type="button"
-        :disabled="disabled"
-        @click="
-          open = !open
-          search = ''
-        "
-      >
-        ⌄
-      </button>
+        autocomplete="off"
+        @focus="onFocus"
+        @input="onInput"
+      />
+      <button type="button" :disabled="disabled" @click="toggleDropdown">⌄</button>
     </div>
-    <div v-if="open && !disabled" class="choices">
-      <button v-for="x in filtered" :key="x.id" type="button" @click="choose(x)">
-        {{ x.name }}
+    <div v-if="isOpen && !disabled" class="choices">
+      <button v-for="item in filtered" :key="item.id" type="button" @click="choose(item)">
+        {{ item.name }}
       </button>
       <div v-if="!filtered.length" class="empty">No matching records</div>
     </div>
   </div>
 </template>
+
 <style scoped>
 .search-select {
   position: relative;
