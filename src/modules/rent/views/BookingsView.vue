@@ -48,6 +48,35 @@ watch(search, () => {
 })
 watch(page, load)
 onMounted(load)
+const rejectTarget = ref(null),
+  rejecting = ref(false),
+  rejectError = ref('')
+function openReject(booking) {
+  rejectTarget.value = booking
+  rejectError.value = ''
+}
+function closeReject() {
+  if (rejecting.value) return
+  rejectTarget.value = null
+  rejectError.value = ''
+}
+async function confirmReject() {
+  if (!rejectTarget.value || rejecting.value) return
+  rejecting.value = true
+  rejectError.value = ''
+  try {
+    await api.patch(`/rent/bookings/${rejectTarget.value.id}/reject`)
+    rejectTarget.value = null
+    await load()
+  } catch (e) {
+    rejectError.value =
+      e.response?.data?.errors?.status?.[0] ||
+      e.response?.data?.message ||
+      tr('Could not reject booking', 'تعذر رفض الحجز')
+  } finally {
+    rejecting.value = false
+  }
+}
 const client = (b) =>
   b.customer?.name ||
   b.customer?.customer_name ||
@@ -118,7 +147,13 @@ const client = (b) =>
                 <td>{{ r.status }}</td>
                 <td>
                   <button class="bk-action" @click="router.push(`/rent/booking/${r.id}`)">
-                    ◉ {{ tr('View', 'عرض') }}
+                    ◉ {{ tr('View', 'عرض') }}</button
+                  ><button
+                    v-if="tab === 'pending' && ['pending', 'online_pending'].includes(r.status)"
+                    class="bk-action bk-danger"
+                    @click="openReject(r)"
+                  >
+                    ▤ {{ tr('Reject', 'رفض') }}
                   </button>
                 </td>
               </tr>
@@ -137,6 +172,35 @@ const client = (b) =>
           <button :disabled="page <= 1" @click="page--">‹</button
           ><span>{{ page }} / {{ lastPage }}</span
           ><button :disabled="page >= lastPage" @click="page++">›</button>
+        </div>
+      </div>
+    </div>
+    <div v-if="rejectTarget" class="bk-overlay" @click.self="closeReject">
+      <div
+        class="bk-modal"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="tr('Reject booking', 'رفض الحجز')"
+      >
+        <h3>{{ tr('Reject booking?', 'هل تريد رفض الحجز؟') }}</h3>
+        <p>
+          {{ tr('Reject booking #', 'رفض الحجز رقم') }}{{ rejectTarget.id }}?
+          {{
+            tr(
+              'This booking will no longer be eligible for vehicle reservation.',
+              'لن يكون هذا الحجز مؤهلاً لربطه بسيارة بعد الرفض.',
+            )
+          }}
+        </p>
+        <p v-if="rejectError" class="bk-error">{{ rejectError }}</p>
+        <div class="bk-modal-actions">
+          <button :disabled="rejecting" class="bk-cancel" @click="closeReject">
+            {{ tr('Cancel', 'إلغاء') }}</button
+          ><button :disabled="rejecting" class="bk-confirm" @click="confirmReject">
+            {{
+              rejecting ? tr('Rejecting...', 'جاري الرفض...') : tr('Reject booking', 'رفض الحجز')
+            }}
+          </button>
         </div>
       </div>
     </div>
@@ -261,5 +325,61 @@ td {
 .bk-error {
   padding: 15px;
   color: #b91c1c;
+}
+.bk-danger {
+  color: #cf2739;
+  margin-inline-start: 12px;
+}
+.bk-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0007;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 18px;
+}
+.bk-modal {
+  background: white;
+  border-radius: 15px;
+  width: min(460px, 100%);
+  box-shadow: 0 20px 75px #0003;
+  padding: 26px;
+}
+.bk-modal h3 {
+  margin: 0 0 14px;
+  font-size: 19px;
+}
+.bk-modal p {
+  line-height: 1.7;
+  font-size: 14px;
+  color: #475569;
+}
+.bk-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+.bk-modal-actions button {
+  border-radius: 22px;
+  padding: 10px 18px;
+  cursor: pointer;
+}
+.bk-cancel {
+  border: 1px solid #d9e1ea;
+  background: white;
+  color: #123;
+}
+.bk-confirm {
+  border: 0;
+  background: #cf2739;
+  color: white;
+  font-weight: 600;
+}
+.bk-modal-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 </style>
