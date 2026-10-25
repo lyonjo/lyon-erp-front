@@ -42,62 +42,44 @@ const carDescription = computed(() =>
     .filter(Boolean)
     .join(' '),
 )
+const details = computed(() => data.value?.customer_details || {})
 const customerFields = computed(() => [
   [t('Booking Number', 'رقم الحجز'), record.value.id],
   [
     t('Customer Name', 'اسم العميل'),
-    get(customer.value, ['name', 'customer_name', 'company_name', 'supplier_name']),
+    details.value.name ?? get(customer.value, ['name', 'customer_name', 'company_name']),
   ],
-  [t('Email', 'البريد الإلكتروني'), get(customer.value, ['email'])],
-  [t('Nationality', 'الجنسية'), get(customer.value, ['nationality', 'country', 'country_name'])],
-  [t('Mobile Number', 'رقم الهاتف'), get(customer.value, ['phone_number', 'phone', 'mobile'])],
-  [t('Address', 'العنوان'), get(customer.value, ['address'])],
-  [
-    t('ID Number', 'رقم الهوية'),
-    get(customer.value, ['id_number', 'national_id', 'identity_number', 'passport_number']),
-  ],
-  [
-    t('ID Date of Issue', 'تاريخ إصدار الهوية'),
-    get(customer.value, ['id_date_of_issue', 'id_issue_date', 'date_of_issue']),
-  ],
-  [
-    t('ID Expiry Date', 'تاريخ انتهاء الهوية'),
-    get(customer.value, ['id_expiry_date', 'id_expiration_date', 'expiry_date']),
-  ],
-  [
-    t('ID Place of Issue', 'مكان إصدار الهوية'),
-    get(customer.value, ['id_place_of_issue', 'id_issue_place', 'place_of_issue']),
-  ],
-  [t('Date of Birth', 'تاريخ الميلاد'), get(customer.value, ['date_of_birth', 'birth_date'])],
-  [t('Place of Birth', 'مكان الميلاد'), get(customer.value, ['place_of_birth', 'birth_place'])],
+  [t('Email', 'البريد الإلكتروني'), details.value.email ?? get(customer.value, ['email'])],
+  [t('Nationality', 'الجنسية'), details.value.nationality],
+  [t('Mobile Number', 'رقم الهاتف'), details.value.phone],
+  [t('Address', 'العنوان'), details.value.address],
+  [t('ID Number', 'رقم الهوية'), details.value.id_number],
+  [t('ID Date of Issue', 'تاريخ إصدار الهوية'), details.value.id_issue_date],
+  [t('ID Expiry Date', 'تاريخ انتهاء الهوية'), details.value.id_expiry_date],
+  [t('ID Place of Issue', 'مكان إصدار الهوية'), details.value.id_issue_place],
+  [t('Date of Birth', 'تاريخ الميلاد'), details.value.date_of_birth],
+  [t('Place of Birth', 'مكان الميلاد'), details.value.place_of_birth],
 ])
 const licenseFields = computed(() => {
-  const c = customer.value,
+  const d = details.value,
+    c = customer.value,
     l = data.value?.customer_license || {}
   return [
     [
       t('License Number', 'رقم الرخصة'),
-      get(l, ['license_number', 'number']) !== '—'
-        ? get(l, ['license_number', 'number'])
-        : get(c, ['license_number', 'driver_license_number']),
+      d.license_number ?? get(l, ['license_number', 'number']) ?? get(c, ['license_number']),
     ],
     [
       t('Date of Issue', 'تاريخ الإصدار'),
-      get(l, ['date_of_issue', 'issue_date']) !== '—'
-        ? get(l, ['date_of_issue', 'issue_date'])
-        : get(c, ['license_date_of_issue', 'license_issue_date']),
+      d.license_issue_date ?? get(l, ['date_of_issue', 'issue_date']),
     ],
     [
       t('Expiry Date', 'تاريخ الانتهاء'),
-      get(l, ['expiry_date', 'expiration_date']) !== '—'
-        ? get(l, ['expiry_date', 'expiration_date'])
-        : get(c, ['license_expiry_date', 'license_expiration_date']),
+      d.license_expiry_date ?? get(l, ['expiry_date', 'expiration_date']),
     ],
     [
       t('Place of Issue', 'مكان الإصدار'),
-      get(l, ['place_of_issue', 'issue_place']) !== '—'
-        ? get(l, ['place_of_issue', 'issue_place'])
-        : get(c, ['license_place_of_issue', 'license_issue_place']),
+      d.license_issue_place ?? get(l, ['place_of_issue', 'issue_place']),
     ],
   ]
 })
