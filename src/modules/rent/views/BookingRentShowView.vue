@@ -31,6 +31,12 @@ const customerCompany = computed(() => record.value?.customer_company || null)
 const showDocuments = computed(
   () => !record.value?.customer_company_id && !!record.value?.customer_id,
 )
+const isAirportPickup = computed(() =>
+  /airport|مطار/i.test(String(record.value?.pick_up_location || '')),
+)
+const visibleDocSpecs = computed(() =>
+  docSpecs.filter((spec) => spec.type !== 'flight_ticket' || isAirportPickup.value),
+)
 const personName = computed(
   () =>
     customer.value?.name ||
@@ -144,7 +150,7 @@ async function loadDocuments() {
     const { data } = await api.get(`/rent/bookings/${bookingId.value}/documents`)
     documents.value = data.data || {}
     await Promise.all(
-      docSpecs.map(async ({ type }) => {
+      visibleDocSpecs.value.map(async ({ type }) => {
         if (documents.value[type]?.exists) {
           await fetchImage(type, `/rent/bookings/${bookingId.value}/documents/${type}`)
           return
@@ -207,6 +213,7 @@ async function onFileChange(type, event) {
   const file = event.target.files?.[0]
   event.target.value = ''
   if (!file || uploadBusy.value) return
+  if (type === 'flight_ticket' && !isAirportPickup.value) return
   const allowed = ['image/jpeg', 'image/png', 'image/webp']
   if (!allowed.includes(file.type) || file.size > 5 * 1024 * 1024) {
     docError.value = tr(
@@ -311,7 +318,7 @@ onBeforeUnmount(clearImages)
         <div v-if="loadingDocuments" class="docs-note">
           {{ tr('Loading documents...', 'جاري تحميل المستندات...') }}
         </div>
-        <div v-for="spec in docSpecs" :key="spec.type" class="document-row">
+        <div v-for="spec in visibleDocSpecs" :key="spec.type" class="document-row">
           <div class="document-name">
             <strong>{{ tr(spec.en, spec.ar) }}</strong>
             <small v-if="documents[spec.type]?.inherited">{{
