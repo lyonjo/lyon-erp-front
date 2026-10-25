@@ -55,7 +55,24 @@ const carName = computed(() => {
 const extraNames = computed(
   () => (record.value?.extra_items || []).map((item) => item.name).join(' · ') || '—',
 )
-const currency = computed(() => record.value?.currency || 'JOD')
+const tenantCurrency = ref('JOD')
+const currency = computed(() => record.value?.currency || tenantCurrency.value)
+const countryFromCurrency = computed(() => {
+  const code = String(tenantCurrency.value || '').toUpperCase()
+  const names = {
+    JOD: ['Jordan', 'الأردن'],
+    USD: ['United States', 'الولايات المتحدة'],
+    EUR: ['Eurozone', 'منطقة اليورو'],
+    SAR: ['Saudi Arabia', 'السعودية'],
+    AED: ['United Arab Emirates', 'الإمارات العربية المتحدة'],
+    EGP: ['Egypt', 'مصر'],
+    KWD: ['Kuwait', 'الكويت'],
+    QAR: ['Qatar', 'قطر'],
+    BHD: ['Bahrain', 'البحرين'],
+    OMR: ['Oman', 'عُمان'],
+  }
+  return names[code] ? tr(...names[code]) : '—'
+})
 const money = (value) => `${Number(value || 0).toFixed(2)} ${currency.value}`
 const dateLabel = (value) => (value ? String(value).slice(0, 10) : '—')
 const textValue = (value) => (value === null || value === undefined || value === '' ? '—' : value)
@@ -70,12 +87,7 @@ const customerRows = computed(() => [
   [tr('Email', 'البريد الإلكتروني'), customer.value?.email || customerCompany.value?.email],
   [tr('Service Type', 'نوع الخدمة'), serviceText.value],
   [tr('Car Type', 'نوع السيارة'), carName.value],
-  [
-    tr('Country', 'الدولة'),
-    customer.value?.country ||
-      customer.value?.details?.nationality ||
-      customerCompany.value?.country,
-  ],
+  [tr('Country', 'الدولة'), countryFromCurrency.value],
 ])
 const rentalRows = computed(() => [
   [tr('Start Date', 'تاريخ البداية'), dateLabel(record.value?.start_date)],
@@ -167,6 +179,12 @@ async function load() {
   try {
     const { data } = await api.get(`/rent/bookings/${bookingId.value}`)
     record.value = data.data
+    try {
+      const settingsResponse = await api.get('/rent/settings')
+      tenantCurrency.value = settingsResponse.data?.data?.currency || 'JOD'
+    } catch {
+      tenantCurrency.value = 'JOD'
+    }
     await loadDocuments()
   } catch (e) {
     error.value =
@@ -197,22 +215,6 @@ async function onFileChange(type, event) {
     await loadDocuments()
   } catch (e) {
     docError.value = e.response?.data?.message || tr('Unable to upload image.', 'تعذر رفع الصورة.')
-  } finally {
-    uploadBusy.value = ''
-  }
-}
-
-async function removeDocument(type) {
-  if (uploadBusy.value || !documents.value[type]?.exists) return
-  if (!window.confirm(tr('Remove this booking document?', 'هل تريد حذف مستند الحجز؟'))) return
-  uploadBusy.value = type
-  docError.value = ''
-  try {
-    await api.delete(`/rent/bookings/${bookingId.value}/documents/${type}`)
-    await loadDocuments()
-  } catch (e) {
-    docError.value =
-      e.response?.data?.message || tr('Unable to remove document.', 'تعذر حذف المستند.')
   } finally {
     uploadBusy.value = ''
   }
@@ -286,8 +288,8 @@ onBeforeUnmount(clearImages)
         <p class="docs-note">
           {{
             tr(
-              'View or upload images for this booking. Existing customer documents are shown when available.',
-              'عرض أو رفع الصور لهذا الحجز. تظهر مستندات العميل الحالية عند توفرها.',
+              'View or replace documents. License and ID/passport changes update the linked customer or customer company profile.',
+              'عرض المستندات أو استبدالها. يتم تحديث الرخصة والهوية في ملف العميل أو شركة العميل المرتبطة.',
             )
           }}
         </p>
@@ -328,15 +330,6 @@ onBeforeUnmount(clearImages)
                 @change="onFileChange(spec.type, $event)"
               />
             </label>
-            <button
-              v-if="documents[spec.type]?.exists"
-              class="remove-action"
-              type="button"
-              :disabled="!!uploadBusy"
-              @click="removeDocument(spec.type)"
-            >
-              {{ tr('Remove', 'حذف') }}
-            </button>
           </div>
         </div>
       </section>
