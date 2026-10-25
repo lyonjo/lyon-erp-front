@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
@@ -81,6 +81,39 @@ const availabilityOpen = ref(false),
   availabilityLoading = ref(false),
   availabilityError = ref('')
 const availabilityCompanies = ref([])
+const companyPickerOpen = ref(false)
+const companyPickerQuery = ref('')
+const companyPickerRef = ref(null)
+const companyChoices = computed(() =>
+  availabilityCompanies.value.filter((c) =>
+    String(c.name || c.company_name || '')
+      .toLocaleLowerCase()
+      .includes(companyPickerQuery.value.trim().toLocaleLowerCase()),
+  ),
+)
+function selectReportCompany(company) {
+  availabilityForm.value.customer_company_id = company.id
+  companyPickerQuery.value = company.name || company.company_name || ''
+  companyPickerOpen.value = false
+}
+function onReportCompanyInput(event) {
+  companyPickerQuery.value = event.target.value
+  availabilityForm.value.customer_company_id = ''
+  companyPickerOpen.value = true
+}
+function onCompanyPickerOutside(event) {
+  if (companyPickerRef.value && !companyPickerRef.value.contains(event.target))
+    companyPickerOpen.value = false
+}
+function onCompanyPickerKeydown(event) {
+  if (event.key === 'Escape') companyPickerOpen.value = false
+  if (event.key === 'Enter' && companyPickerOpen.value && companyChoices.value.length) {
+    event.preventDefault()
+    selectReportCompany(companyChoices.value[0])
+  }
+}
+onMounted(() => document.addEventListener('pointerdown', onCompanyPickerOutside))
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onCompanyPickerOutside))
 const availabilityForm = ref({
   client_type: 'customer',
   customer_company_id: '',
@@ -92,19 +125,32 @@ const availabilityForm = ref({
 function openAvailability() {
   availabilityError.value = ''
   availabilityOpen.value = true
+  companyPickerOpen.value = false
+  companyPickerQuery.value =
+    availabilityCompanies.value.find(
+      (c) => String(c.id) === String(availabilityForm.value.customer_company_id),
+    )?.name || ''
   if (!availabilityCompanies.value.length) loadAvailabilityCompanies()
 }
 async function loadAvailabilityCompanies() {
   try {
     const { data } = await api.get('/rent/bookings/options')
     availabilityCompanies.value = data.data?.customer_companies || []
+    const selectedCompany = availabilityCompanies.value.find(
+      (c) => String(c.id) === String(availabilityForm.value.customer_company_id),
+    )
+    if (selectedCompany)
+      companyPickerQuery.value = selectedCompany.name || selectedCompany.company_name || ''
   } catch (e) {
     availabilityError.value =
       e.response?.data?.message || tr('Could not load companies', 'تعذر تحميل الشركات')
   }
 }
 function closeAvailability() {
-  if (!availabilityLoading.value) availabilityOpen.value = false
+  if (!availabilityLoading.value) {
+    availabilityOpen.value = false
+    companyPickerOpen.value = false
+  }
 }
 async function openAvailabilityReport() {
   const f = availabilityForm.value
@@ -294,28 +340,48 @@ const client = (b) =>
             {{ tr('Company', 'شركة') }}</label
           >
         </div>
-        <label v-if="availabilityForm.client_type === 'company'" class="bk-field"
-          >{{ tr('Customer Company', 'شركة العميل') }} *
-          <input
-            v-model="availabilityForm.company_search"
-            :placeholder="tr('Search companies...', 'ابحث عن الشركة...')"
-            class="bk-company-search"
-          />
-          <select v-model="availabilityForm.customer_company_id">
-            <option value="">{{ tr('Select customer company', 'اختر شركة العميل') }}</option>
-            <option
-              v-for="c in availabilityCompanies.filter((x) =>
-                String(x.name || '')
-                  .toLowerCase()
-                  .includes(String(availabilityForm.company_search || '').toLowerCase()),
-              )"
-              :key="c.id"
-              :value="c.id"
+        <div v-if="availabilityForm.client_type === 'company'" class="bk-field">
+          <label class="bk-company-label"
+            >{{ tr('Customer Company', 'شركة العميل') }} <span class="bk-required">*</span></label
+          >
+          <div ref="companyPickerRef" class="bk-company-picker">
+            <input
+              :value="companyPickerQuery"
+              type="text"
+              role="combobox"
+              aria-autocomplete="list"
+              :aria-expanded="companyPickerOpen"
+              :placeholder="tr('Search or select a company...', 'ابحث عن شركة أو اخترها...')"
+              autocomplete="off"
+              @focus="companyPickerOpen = true"
+              @input="onReportCompanyInput"
+              @keydown="onCompanyPickerKeydown"
+            />
+            <button
+              type="button"
+              class="bk-company-toggle"
+              :aria-label="tr('Show companies', 'عرض الشركات')"
+              @click="companyPickerOpen = !companyPickerOpen"
             >
-              {{ c.name }}
-            </option>
-          </select>
-        </label>
+              ⌄
+            </button>
+            <div v-if="companyPickerOpen" class="bk-company-options" role="listbox">
+              <button
+                v-for="c in companyChoices"
+                :key="c.id"
+                type="button"
+                role="option"
+                :aria-selected="String(availabilityForm.customer_company_id) === String(c.id)"
+                @click="selectReportCompany(c)"
+              >
+                {{ c.name || c.company_name }}
+              </button>
+              <div v-if="!companyChoices.length" class="bk-company-empty">
+                {{ tr('No companies found', 'لا توجد شركات مطابقة') }}
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="bk-availability-grid">
           <label class="bk-field"
             >{{ tr('Start Date', 'تاريخ البداية') }} *<input
@@ -621,8 +687,76 @@ td {
 .bk-field select {
   width: 100%;
 }
-.bk-field .bk-company-search {
-  margin-bottom: 7px;
+.bk-company-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.bk-required {
+  color: #c12437;
+}
+.bk-company-picker {
+  position: relative;
+  width: 100%;
+}
+.bk-company-picker input {
+  width: 100%;
+  padding-inline-end: 42px;
+  box-sizing: border-box;
+  outline: none;
+}
+.bk-company-picker input:focus {
+  border-color: #6da2c3;
+  box-shadow: 0 0 0 2px #6da2c31c;
+}
+.bk-company-toggle {
+  position: absolute;
+  inset-inline-end: 1px;
+  top: 1px;
+  height: 34px;
+  width: 38px;
+  border: 0;
+  background: transparent;
+  color: #526579;
+  cursor: pointer;
+}
+.bk-company-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #d5e0eb;
+  background: white;
+  border-radius: 9px;
+  box-shadow: 0 9px 25px #091f3522;
+  z-index: 215;
+  padding: 4px;
+}
+.bk-company-options button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: start;
+  border: 0;
+  background: white;
+  color: #18395d;
+  cursor: pointer;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 400;
+}
+.bk-company-options button:hover,
+.bk-company-options button[aria-selected='true'] {
+  background: #eaf3f9;
+}
+.bk-company-empty {
+  padding: 12px;
+  color: #7a899c;
+  font-weight: 400;
 }
 .bk-modal .bk-error {
   background: #fff2f2;
