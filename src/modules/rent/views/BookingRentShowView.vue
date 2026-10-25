@@ -27,6 +27,10 @@ const docSpecs = [
 
 const customer = computed(() => record.value?.customer || null)
 const customerCompany = computed(() => record.value?.customer_company || null)
+// Customer company bookings do not display or load uploaded documents.
+const showDocuments = computed(
+  () => !record.value?.customer_company_id && !!record.value?.customer_id,
+)
 const personName = computed(
   () =>
     customer.value?.name ||
@@ -185,7 +189,12 @@ async function load() {
     } catch {
       tenantCurrency.value = 'JOD'
     }
-    await loadDocuments()
+    if (showDocuments.value) {
+      await loadDocuments()
+    } else {
+      documents.value = {}
+      docError.value = ''
+    }
   } catch (e) {
     error.value =
       e.response?.data?.message || tr('Could not load booking details.', 'تعذر تحميل تفاصيل الحجز.')
@@ -212,7 +221,12 @@ async function onFileChange(type, event) {
   form.append('image', file)
   try {
     await api.post(`/rent/bookings/${bookingId.value}/documents/${type}`, form)
-    await loadDocuments()
+    if (showDocuments.value) {
+      await loadDocuments()
+    } else {
+      documents.value = {}
+      docError.value = ''
+    }
   } catch (e) {
     docError.value = e.response?.data?.message || tr('Unable to upload image.', 'تعذر رفع الصورة.')
   } finally {
@@ -283,7 +297,7 @@ onBeforeUnmount(clearImages)
         </dl>
       </section>
 
-      <section class="panel documents-panel">
+      <section v-if="showDocuments" class="panel documents-panel">
         <h2>{{ tr('Uploaded Documents', 'المستندات المرفوعة') }}</h2>
         <p class="docs-note">
           {{
@@ -336,7 +350,7 @@ onBeforeUnmount(clearImages)
     </div>
 
     <div
-      v-if="openImage && imageUrls[openImage]"
+      v-if="showDocuments && openImage && imageUrls[openImage]"
       class="overlay"
       role="dialog"
       aria-modal="true"
