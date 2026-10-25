@@ -110,8 +110,20 @@ async function submitTransfer() {
     transferring.value = false
   }
 }
-async function downloadReport() {
+async function openReport() {
   if (!reportCompanyId.value || exporting.value) return
+
+  // Open immediately during the click event to avoid browser popup blockers.
+  const reportTab = window.open('', '_blank')
+  if (!reportTab) {
+    reportError.value = t(
+      'Allow pop-ups to open the PDF in a new tab.',
+      'يرجى السماح بفتح النوافذ المنبثقة لعرض التقرير.',
+    )
+    return
+  }
+  reportTab.document.title = 'Available Cars Report'
+  reportTab.document.body.textContent = 'Generating available cars report...'
   exporting.value = true
   reportError.value = ''
   try {
@@ -123,14 +135,11 @@ async function downloadReport() {
       responseType: 'blob',
     })
     const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'available-cars.pdf'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 10000)
+    reportTab.location.replace(url)
+    // Keep the blob URL around long enough for the browser's PDF viewer to load.
+    setTimeout(() => URL.revokeObjectURL(url), 120000)
   } catch (e) {
+    reportTab.close()
     reportError.value = errorMessage(e)
   } finally {
     exporting.value = false
@@ -239,10 +248,12 @@ async function downloadReport() {
       </template>
 
       <template v-else>
-        <form class="report-form" @submit.prevent="downloadReport">
+        <form class="report-form" @submit.prevent="openReport">
           <div class="report-fields">
             <label
-              >{{ t('Company', 'الشركة') }} <span>*</span>
+              ><span class="field-heading"
+                >{{ t('Company', 'الشركة') }} <span class="required-mark">*</span></span
+              >
               <select v-model="reportCompanyId" required>
                 <option value="">{{ t('Select Company', 'اختر الشركة') }}</option>
                 <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
@@ -260,7 +271,7 @@ async function downloadReport() {
               {{
                 exporting
                   ? t('Generating PDF...', 'جارٍ إنشاء التقرير...')
-                  : t('Download PDF Report', 'تحميل تقرير PDF')
+                  : t('Open PDF Report', 'فتح تقرير PDF')
               }}
             </button>
           </div>
@@ -463,7 +474,14 @@ td {
   flex-direction: column;
   gap: 10px;
 }
-.report-fields label span {
+.report-fields .field-heading {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  color: #0b2041;
+}
+.report-fields .required-mark {
   color: #c63844;
 }
 .report-fields select,
