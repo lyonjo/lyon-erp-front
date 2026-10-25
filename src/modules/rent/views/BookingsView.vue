@@ -77,6 +77,94 @@ async function confirmReject() {
     rejecting.value = false
   }
 }
+const availabilityOpen = ref(false),
+  availabilityLoading = ref(false),
+  availabilityError = ref('')
+const availabilityCompanies = ref([])
+const availabilityForm = ref({
+  client_type: 'customer',
+  customer_company_id: '',
+  start_date: '',
+  start_time: '09:00',
+  end_date: '',
+  end_time: '09:00',
+})
+function openAvailability() {
+  availabilityError.value = ''
+  availabilityOpen.value = true
+  if (!availabilityCompanies.value.length) loadAvailabilityCompanies()
+}
+async function loadAvailabilityCompanies() {
+  try {
+    const { data } = await api.get('/rent/bookings/options')
+    availabilityCompanies.value = data.data?.customer_companies || []
+  } catch (e) {
+    availabilityError.value =
+      e.response?.data?.message || tr('Could not load companies', 'تعذر تحميل الشركات')
+  }
+}
+function closeAvailability() {
+  if (!availabilityLoading.value) availabilityOpen.value = false
+}
+async function openAvailabilityReport() {
+  const f = availabilityForm.value
+  if (f.client_type === 'company' && !f.customer_company_id) {
+    availabilityError.value = tr('Select a customer company.', 'اختر شركة العميل.')
+    return
+  }
+  if (
+    !f.start_date ||
+    !f.start_time ||
+    !f.end_date ||
+    !f.end_time ||
+    new Date(`${f.end_date}T${f.end_time}`) <= new Date(`${f.start_date}T${f.start_time}`)
+  ) {
+    availabilityError.value = tr(
+      'Enter a valid start and end date/time.',
+      'أدخل وقت وتاريخ بداية ونهاية صحيحين.',
+    )
+    return
+  }
+  // Open synchronously inside the user click event to avoid popup blockers.
+  const pdfTab = window.open('', '_blank')
+  if (!pdfTab) {
+    availabilityError.value = tr(
+      'Allow popups for the PDF report.',
+      'اسمح بالنوافذ المنبثقة لعرض التقرير.',
+    )
+    return
+  }
+  pdfTab.document.title = 'Available Cars Report'
+  pdfTab.document.body.textContent = 'Loading PDF...'
+  availabilityLoading.value = true
+  availabilityError.value = ''
+  try {
+    const { data } = await api.get('/rent/bookings/available-cars/report', {
+      params: {
+        client_type: f.client_type,
+        customer_company_id: f.client_type === 'company' ? f.customer_company_id : undefined,
+        start_date: f.start_date,
+        start_time: f.start_time,
+        end_date: f.end_date,
+        end_time: f.end_time,
+      },
+      responseType: 'blob',
+    })
+    const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }))
+    pdfTab.location.replace(url)
+    availabilityOpen.value = false
+    // Do not revoke immediately: the PDF viewer may still be reading the URL.
+    setTimeout(() => URL.revokeObjectURL(url), 120000)
+  } catch (e) {
+    pdfTab.close()
+    availabilityError.value = tr(
+      'Unable to generate available cars report.',
+      'تعذر إنشاء تقرير السيارات المتاحة.',
+    )
+  } finally {
+    availabilityLoading.value = false
+  }
+}
 const client = (b) =>
   b.customer?.name ||
   b.customer?.customer_name ||
@@ -88,9 +176,13 @@ const client = (b) =>
   <section class="bk-page" :dir="locale === 'ar' ? 'rtl' : 'ltr'">
     <div class="bk-head">
       <h2>{{ tr('Booking', 'الحجوزات') }}</h2>
-      <button class="bk-primary" @click="router.push('/rent/booking/create')">
-        + {{ tr('New Booking', 'حجز جديد') }}
-      </button>
+      <div class="bk-header-actions">
+        <button class="bk-secondary" type="button" @click="openAvailability">
+          {{ tr('Available Cars', 'السيارات المتاحة') }}</button
+        ><button class="bk-primary" @click="router.push('/rent/booking/create')">
+          + {{ tr('New Booking', 'حجز جديد') }}
+        </button>
+      </div>
     </div>
     <div class="bk-card">
       <nav class="bk-tabs">
@@ -172,6 +264,95 @@ const client = (b) =>
           <button :disabled="page <= 1" @click="page--">‹</button
           ><span>{{ page }} / {{ lastPage }}</span
           ><button :disabled="page >= lastPage" @click="page++">›</button>
+        </div>
+      </div>
+    </div>
+    <div v-if="availabilityOpen" class="bk-overlay" @click.self="closeAvailability">
+      <div
+        class="bk-modal bk-availability-modal"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="tr('Available cars report', 'تقرير السيارات المتاحة')"
+      >
+        <div class="bk-modal-title">
+          <h3>{{ tr('Available Cars Report', 'تقرير السيارات المتاحة') }}</h3>
+          <button
+            class="bk-close"
+            type="button"
+            :disabled="availabilityLoading"
+            @click="closeAvailability"
+          >
+            ×
+          </button>
+        </div>
+        <div class="bk-client-types">
+          <label
+            ><input v-model="availabilityForm.client_type" type="radio" value="customer" />
+            {{ tr('Customer', 'عميل') }}</label
+          ><label
+            ><input v-model="availabilityForm.client_type" type="radio" value="company" />
+            {{ tr('Company', 'شركة') }}</label
+          >
+        </div>
+        <label v-if="availabilityForm.client_type === 'company'" class="bk-field"
+          >{{ tr('Customer Company', 'شركة العميل') }} *
+          <input
+            v-model="availabilityForm.company_search"
+            :placeholder="tr('Search companies...', 'ابحث عن الشركة...')"
+            class="bk-company-search"
+          />
+          <select v-model="availabilityForm.customer_company_id">
+            <option value="">{{ tr('Select customer company', 'اختر شركة العميل') }}</option>
+            <option
+              v-for="c in availabilityCompanies.filter((x) =>
+                String(x.name || '')
+                  .toLowerCase()
+                  .includes(String(availabilityForm.company_search || '').toLowerCase()),
+              )"
+              :key="c.id"
+              :value="c.id"
+            >
+              {{ c.name }}
+            </option>
+          </select>
+        </label>
+        <div class="bk-availability-grid">
+          <label class="bk-field"
+            >{{ tr('Start Date', 'تاريخ البداية') }} *<input
+              v-model="availabilityForm.start_date"
+              type="date"
+          /></label>
+          <label class="bk-field"
+            >{{ tr('Start Time', 'وقت البداية') }} *<input
+              v-model="availabilityForm.start_time"
+              type="time"
+          /></label>
+          <label class="bk-field"
+            >{{ tr('End Date', 'تاريخ النهاية') }} *<input
+              v-model="availabilityForm.end_date"
+              type="date"
+          /></label>
+          <label class="bk-field"
+            >{{ tr('End Time', 'وقت النهاية') }} *<input
+              v-model="availabilityForm.end_time"
+              type="time"
+          /></label>
+        </div>
+        <p v-if="availabilityError" class="bk-error">{{ availabilityError }}</p>
+        <div class="bk-modal-actions">
+          <button class="bk-cancel" :disabled="availabilityLoading" @click="closeAvailability">
+            {{ tr('Cancel', 'إلغاء') }}</button
+          ><button
+            class="bk-primary"
+            :disabled="availabilityLoading"
+            @click="openAvailabilityReport"
+          >
+            {{
+              availabilityLoading
+                ? tr('Generating...', 'جاري الإنشاء...')
+                : tr('Open PDF Report', 'فتح تقرير PDF')
+            }}
+          </button>
         </div>
       </div>
     </div>
@@ -381,5 +562,82 @@ td {
 .bk-modal-actions button:disabled {
   opacity: 0.55;
   cursor: wait;
+}
+.bk-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.bk-secondary {
+  background: #f1f7fb;
+  border: 1px solid #b4d2e6;
+  border-radius: 23px;
+  padding: 10px 20px;
+  color: #245b7e;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bk-modal-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.bk-close {
+  background: none;
+  border: 0;
+  font-size: 26px;
+  cursor: pointer;
+}
+.bk-availability-modal {
+  width: min(650px, 100%);
+}
+.bk-client-types {
+  display: flex;
+  gap: 25px;
+  margin: 16px 0 20px;
+}
+.bk-availability-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.bk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 13px;
+}
+.bk-field input,
+.bk-field select {
+  height: 36px;
+  border: 1px solid #d5e0eb;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #fff;
+  color: #18395d;
+}
+.bk-field select {
+  width: 100%;
+}
+.bk-field .bk-company-search {
+  margin-bottom: 7px;
+}
+.bk-modal .bk-error {
+  background: #fff2f2;
+  border-radius: 7px;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .bk-availability-grid {
+    grid-template-columns: 1fr;
+  }
+  .bk-head {
+    align-items: flex-start;
+  }
+  .bk-header-actions {
+    flex-wrap: wrap;
+  }
 }
 </style>

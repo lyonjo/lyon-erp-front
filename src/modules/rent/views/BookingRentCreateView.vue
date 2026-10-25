@@ -80,13 +80,6 @@ const taxableBase = computed(
 )
 const tax = computed(() => 0)
 const total = computed(() => taxableBase.value + tax.value + branchFee.value)
-const companyTotal = computed(
-  () =>
-    (Number(selection.value?.day_company_price) || 0) * days.value +
-    extra.value +
-    tax.value +
-    branchFee.value,
-)
 const money = (n) => Number(n || 0).toFixed(2) + ' ' + currency.value
 const imageUrls = ref({})
 const imageObjects = []
@@ -417,10 +410,6 @@ async function save() {
             ><strong>{{ money(selection.day_price) }}</strong>
           </div>
           <div>
-            <span>{{ tr('Company Day Price', 'سعر الشركة اليومي') }}</span
-            ><strong>{{ money(selection.day_company_price) }}</strong>
-          </div>
-          <div>
             <span>{{ tr('Extras', 'الإضافات') }}</span
             ><strong>{{ money(extra) }}</strong>
           </div>
@@ -431,10 +420,6 @@ async function save() {
           <div class="br-total">
             <span>{{ tr('Total', 'الإجمالي') }}</span
             ><strong>{{ money(total) }}</strong>
-          </div>
-          <div class="br-total">
-            <span>{{ tr('Company Total', 'إجمالي الشركة') }}</span
-            ><strong>{{ money(companyTotal) }}</strong>
           </div>
           <p class="br-help">
             {{
