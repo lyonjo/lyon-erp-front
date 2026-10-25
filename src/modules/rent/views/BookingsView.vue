@@ -287,6 +287,12 @@ const client = (b) =>
                   <button class="bk-action" @click="router.push(`/rent/booking/${r.id}`)">
                     ◉ {{ tr('View', 'عرض') }}</button
                   ><button
+                    v-if="tab === 'reservations' && r.status === 'approved'"
+                    class="bk-action bk-relay"
+                    @click="router.push(`/rent/booking/${r.id}/relay`)"
+                  >
+                    ⇄ {{ tr('Relay', 'تسليم') }}</button
+                  ><button
                     v-if="tab === 'pending' && ['pending', 'online_pending'].includes(r.status)"
                     class="bk-action bk-danger"
                     @click="openReject(r)"
@@ -572,6 +578,11 @@ td {
 .bk-error {
   padding: 15px;
   color: #b91c1c;
+}
+.bk-relay {
+  color: #2175a1;
+  font-weight: 650;
+  margin-inline-start: 8px;
 }
 .bk-danger {
   color: #cf2739;

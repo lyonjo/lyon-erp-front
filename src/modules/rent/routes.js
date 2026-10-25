@@ -161,6 +161,11 @@ const children = [
     meta: { title: 'Edit Company Rental Price' },
   },
   { path: 'booking/create', component: () => import('./views/BookingRentCreateView.vue') },
+  {
+    path: 'booking/:id/relay',
+    component: () => import('./views/BookingRelayView.vue'),
+    meta: { title: 'Relay Booking' },
+  },
   { path: 'booking/:id', component: () => import('./views/BookingRentShowView.vue') },
   { path: 'car-rentered/:id', component: () => import('./views/ReservationCarDetailsView.vue') },
 ]
