@@ -68,7 +68,11 @@ const name = computed(
     '—',
 )
 const maxValue = computed(() =>
-  Math.max(0, Number(balance.value?.remaining || 0) + Number(payment.value?.company_value || 0)),
+  Math.max(
+    0,
+    Number(payment.value?.editable_remaining ?? balance.value?.remaining ?? 0) +
+      Number(payment.value?.company_value || 0),
+  ),
 )
 const fmt = (n) => Number(n || 0).toFixed(2)
 function errorMessage(e) {
@@ -98,14 +102,18 @@ async function load() {
       check_due_date: String(p.check_due_date || '').slice(0, 10),
     }
     const referenceId = reference.value
-    const [bankResponse, balanceResponse] = await Promise.all([
-      api.get('/rent/payments/banks', { params: { payment_for: p.payment_for } }),
-      api.get('/rent/payments/lookup', {
-        params: { payment_for: p.payment_for, reference_id: referenceId },
-      }),
-    ])
+    const isCompanyAllocation =
+      p.customer_company_id && ['booking', 'contract'].includes(p.payment_for)
+    const bankResponse = await api.get('/rent/payments/banks', {
+      params: { payment_for: isCompanyAllocation ? 'company' : p.payment_for },
+    })
     banks.value = bankResponse.data.data || []
-    balance.value = balanceResponse.data.data
+    if (!isCompanyAllocation) {
+      const balanceResponse = await api.get('/rent/payments/lookup', {
+        params: { payment_for: p.payment_for, reference_id: referenceId },
+      })
+      balance.value = balanceResponse.data.data
+    }
   } catch (e) {
     error.value = errorMessage(e)
   } finally {

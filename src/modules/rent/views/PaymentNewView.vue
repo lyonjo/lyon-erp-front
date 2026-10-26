@@ -306,6 +306,14 @@ onMounted(loadPayments)
               }}</label
               ><input :value="money(data.total_value)" readonly />
             </div>
+            <p v-if="paymentFor === 'company'" class="pay-note">
+              {{
+                tr(
+                  'One company payment is automatically distributed across outstanding contracts and bookings, oldest first. Each allocation is stored as a separate linked payment.',
+                  'توزّع دفعة الشركة تلقائياً على أرصدة العقود والحجوزات المستحقة حسب الأقدم، وتحفظ دفعة مرتبطة لكل توزيع.',
+                )
+              }}
+            </p>
             <div class="pay-field">
               <label>{{ tr('Remaining Amount', 'المبلغ المتبقي') }}</label
               ><input :value="money(remaining)" readonly />
