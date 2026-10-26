@@ -187,6 +187,11 @@ const children = [
     path: 'contracts/rental/:id/video',
     component: () => import('./views/RentalContractVideoView.vue'),
   },
+  {
+    path: 'payments/new',
+    component: () => import('./views/PaymentNewView.vue'),
+    meta: { title: 'New Payment' },
+  },
 ]
 
 export default {

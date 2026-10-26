@@ -1,9 +1,11 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
 const { locale } = useI18n()
+const router = useRouter()
 const ar = computed(() => locale.value.startsWith('ar'))
 const tr = (en, arabic) => (ar.value ? arabic : en)
 const tab = ref('payments')
@@ -26,6 +28,33 @@ const data = ref(null)
 const banks = ref([])
 const form = ref(blankForm())
 const showDetails = ref(null)
+const reportTab = ref('box')
+const report = ref({ from: '', to: '', company_id: '', user_id: '' })
+const reportCompanies = ref([])
+const reportEmployees = ref([])
+const reportBusy = ref(false)
+const reportNotice = ref('')
+async function loadReportOptions() {
+  reportBusy.value = true
+  try {
+    const r = await api.get('/rent/payments/report-options')
+    reportCompanies.value = r.data.companies || []
+    reportEmployees.value = r.data.employees || []
+  } catch (e) {
+    error.value = errorMessage(e)
+  } finally {
+    reportBusy.value = false
+  }
+}
+function openNewPayment() {
+  router.push('/rent/payments/new')
+}
+function reportNotReady() {
+  reportNotice.value = tr(
+    'The report PDF will be implemented in the next phase.',
+    'سيتم تنفيذ تقرير PDF في المرحلة القادمة.',
+  )
+}
 
 function blankForm() {
   return {
@@ -91,7 +120,7 @@ function goToTab(v) {
   error.value = ''
   success.value = ''
   if (v === 'payments') loadPayments()
-  else if (paymentFor.value === 'company') loadCompanies()
+  else loadReportOptions()
 }
 async function loadPayments() {
   loading.value = true
@@ -282,145 +311,61 @@ onMounted(loadPayments)
         </div>
       </template>
       <template v-else>
-        <div class="pay-form">
-          <div class="pay-types">
-            <label v-for="t in types" :key="t.value"
-              ><input type="radio" v-model="paymentFor" :value="t.value" />
-              {{ ar ? t.ar : t.name }}</label
+        <div class="report-box">
+          <div class="report-heading">
+            <button class="pay-blue" @click="openNewPayment">
+              + {{ tr('New Payment', 'دفعة جديدة') }}
+            </button>
+          </div>
+          <div class="report-tabs">
+            <button
+              type="button"
+              :class="{ active: reportTab === 'box' }"
+              @click="reportTab = 'box'"
             >
+              {{ tr('Payment Box', 'صندوق الدفع') }}</button
+            ><button
+              type="button"
+              :class="{ active: reportTab === 'daily' }"
+              @click="reportTab = 'daily'"
+            >
+              {{ tr('Daily Report', 'التقرير اليومي') }}
+            </button>
           </div>
-          <div v-if="paymentFor === 'lawsuits'" class="pay-note">
-            {{ tr('Lawsuit payments are under development.', 'مدفوعات القضايا قيد التطوير.') }}
-          </div>
-          <template v-else>
+          <div class="report-form">
             <div class="pay-grid">
-              <div class="pay-field" v-if="paymentFor !== 'company'">
-                <label
-                  >{{
-                    paymentFor === 'contract'
-                      ? tr('Contract ID', 'رقم العقد')
-                      : paymentFor === 'booking'
-                        ? tr('Booking ID', 'رقم الحجز')
-                        : tr('Sold Car ID', 'رقم السيارة المباعة')
-                  }}
-                  *</label
-                >
-                <div class="pay-inline">
-                  <input v-model="refId" inputmode="numeric" type="number" min="1" /><button
-                    @click="lookup"
-                    :disabled="busy || !refId"
-                  >
-                    {{ tr('Load', 'عرض') }}
-                  </button>
-                </div>
-              </div>
-              <div class="pay-field" v-else>
-                <label>{{ tr('Customer Company', 'شركة العميل') }} *</label
-                ><input
-                  v-model="customerCompanySearch"
-                  :placeholder="tr('Search and select company...', 'بحث واختيار الشركة...')"
-                  @focus="focusCompanyList"
-                  @input="searchCompanyList"
-                />
-                <div v-if="companyListOpen" class="pay-options">
-                  <button
-                    type="button"
-                    v-for="c in customerCompanies"
-                    :key="c.id"
-                    @click="chooseCompany(c)"
-                  >
-                    {{ c.name }}
-                  </button>
-                </div>
+              <div class="pay-field">
+                <label>{{ tr('From', 'من') }}</label
+                ><input v-model="report.from" type="date" />
               </div>
               <div class="pay-field">
-                <label>{{ tr('Date', 'التاريخ') }} *</label
-                ><input v-model="form.date" type="date" />
+                <label>{{ tr('To', 'إلى') }}</label
+                ><input v-model="report.to" type="date" :min="report.from || undefined" />
+              </div>
+              <div class="pay-field">
+                <label>{{ tr('Company', 'الشركة') }}</label
+                ><select v-model="report.company_id">
+                  <option value="">{{ tr('Select company', 'اختر الشركة') }}</option>
+                  <option v-for="c in reportCompanies" :key="c.id" :value="String(c.id)">
+                    {{ c.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="pay-field">
+                <label>{{ tr('Employee', 'الموظف') }}</label
+                ><select v-model="report.user_id">
+                  <option value="">{{ tr('All', 'الكل') }}</option>
+                  <option v-for="e in reportEmployees" :key="e.id" :value="String(e.id)">
+                    {{ e.name }}
+                  </option>
+                </select>
               </div>
             </div>
-            <template v-if="data">
-              <div class="pay-field">
-                <label>{{ tr('Customer / Company Name', 'اسم العميل / الشركة') }}</label
-                ><input :value="data.name" readonly />
-              </div>
-              <div class="pay-field">
-                <label>{{
-                  tr('Contract / Booking / Sale Value', 'قيمة العقد / الحجز / البيع')
-                }}</label
-                ><input :value="money(data.total_value)" readonly />
-              </div>
-              <div class="pay-field">
-                <label>{{ tr('Remaining Amount', 'المبلغ المتبقي') }}</label
-                ><input :value="money(remaining)" readonly />
-              </div>
-              <h3>{{ tr('Payment Details', 'تفاصيل الدفع') }}</h3>
-              <div class="pay-grid">
-                <div class="pay-field">
-                  <label>{{ tr('Payment Value', 'قيمة الدفعة') }} *</label
-                  ><input v-model="form.payment_value" type="number" min="0.01" step="0.01" />
-                </div>
-                <div class="pay-field">
-                  <label>{{ tr('Payment Method', 'طريقة الدفع') }} *</label
-                  ><select v-model="form.payment_type">
-                    <option v-for="x in paymentMethods" :key="x.value" :value="x.value">
-                      {{ ar ? x.ar : x.name }}
-                    </option>
-                  </select>
-                </div>
-              </div>
-              <div class="pay-field">
-                <label>{{ tr('Bank', 'البنك') }} *</label
-                ><select v-model="form.bank_id">
-                  <option value="">{{ tr('Select Bank', 'اختر البنك') }}</option>
-                  <option v-for="bank in bankOptions" :key="bank.id" :value="String(bank.id)">
-                    {{ bank.name }}
-                  </option></select
-                ><small v-if="!banks.length">{{
-                  tr(
-                    'No eligible banks. Configure the Banks module first.',
-                    'لا توجد بنوك مؤهلة؛ يرجى ضبط صفحة البنوك أولاً.',
-                  )
-                }}</small>
-              </div>
-              <div v-if="form.payment_type === 'credit_card'" class="pay-grid">
-                <div class="pay-field">
-                  <label>{{ tr('Authorization Number', 'رقم التفويض') }} *</label
-                  ><input v-model="form.auth_number" />
-                </div>
-                <div class="pay-field">
-                  <label>{{ tr('Credit Card Number', 'رقم بطاقة الائتمان') }} *</label
-                  ><input v-model="form.credit_card_number" />
-                </div>
-              </div>
-              <div v-if="form.payment_type === 'check'" class="pay-grid">
-                <div class="pay-field">
-                  <label>{{ tr('Check Bank', 'بنك الشيك') }} *</label
-                  ><input v-model="form.check_bank" />
-                </div>
-                <div class="pay-field">
-                  <label>{{ tr('Check Number', 'رقم الشيك') }} *</label
-                  ><input v-model="form.check_no" />
-                </div>
-                <div class="pay-field">
-                  <label>{{ tr('Check Due Date', 'تاريخ استحقاق الشيك') }} *</label
-                  ><input v-model="form.check_due_date" type="date" />
-                </div>
-              </div>
-              <label class="pay-checkbox"
-                ><input v-model="form.is_bank_transferee" type="checkbox" />
-                {{ tr('Transferred to bank', 'محول إلى البنك') }}</label
-              >
-              <div class="pay-field">
-                <label>{{ tr('Total Paid So Far', 'إجمالي المدفوعات السابقة') }}</label
-                ><input :value="money(data.paid)" readonly />
-              </div>
-              <div class="pay-submit">
-                <button @click="save" :disabled="busy || remaining <= 0 || !form.bank_id">
-                  {{ busy ? tr('Saving...', 'جاري الحفظ...') : tr('Save Payment', 'حفظ الدفعة') }}
-                </button>
-              </div>
-            </template>
-          </template>
+            <button type="button" class="report-submit" @click="reportNotReady">
+              {{ tr('View Report', 'عرض التقرير') }}
+            </button>
+            <p v-if="reportNotice" class="report-notice">{{ reportNotice }}</p>
+          </div>
         </div>
       </template>
     </section>
@@ -705,5 +650,70 @@ onMounted(loadPayments)
 }
 .pay-options button:hover {
   background: #eff6ff;
+}
+</style>
+
+<style scoped>
+.report-box {
+  border: 1px solid #d6dfe9;
+  border-radius: 16px;
+  margin: 8px 24px 24px;
+  padding: 18px 32px 34px;
+  position: relative;
+}
+.report-heading {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 34px;
+}
+.report-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 36px;
+  margin: 8px 0 32px;
+}
+.report-tabs button {
+  background: none;
+  border: 0;
+  color: #a2aec0;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 15px;
+}
+.report-tabs button.active {
+  color: #0b2340;
+}
+.report-form {
+  max-width: 780px;
+  margin: auto;
+}
+.report-submit {
+  width: 100%;
+  border: 0;
+  border-radius: 22px;
+  background: #629fc4;
+  color: white;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-weight: 700;
+  margin-top: 6px;
+}
+.report-submit:hover {
+  background: #4d8fb7;
+}
+.report-notice {
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 15px;
+}
+@media (max-width: 650px) {
+  .report-box {
+    margin: 8px 10px 18px;
+    padding: 18px;
+  }
+  .report-heading {
+    justify-content: center;
+  }
 }
 </style>
