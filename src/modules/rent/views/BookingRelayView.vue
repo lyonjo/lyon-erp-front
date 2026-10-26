@@ -108,6 +108,37 @@ const rentalDays = computed(() => {
   const millis = end.getTime() - start.getTime()
   return Number.isFinite(millis) && millis > 0 ? Math.max(1, Math.ceil(millis / 86400000)) : 0
 })
+// Mirrors the server's period and interval selection. Laravel validates again on submit.
+const matchedPricing = computed(() => {
+  const pricing = record.value.rental_price
+  if (!pricing || !dropoffDate.value || rentalDays.value < 1 || rentalDays.value > 365) return null
+  const pickup = String(record.value.start_date || '').slice(0, 10)
+  const period = [...(pricing.periods || [])]
+    .filter(
+      (p) =>
+        String(p.start_date || '').slice(0, 10) <= pickup &&
+        String(p.end_date || '').slice(0, 10) >= dropoffDate.value,
+    )
+    .sort((a, b) => Number(b.id || 0) - Number(a.id || 0))[0]
+  if (!period) return null
+  const interval = [...(period.intervals || [])]
+    .filter((i) => Number(i.start) <= rentalDays.value && Number(i.end) >= rentalDays.value)
+    .sort((a, b) => Number(b.id || 0) - Number(a.id || 0))[0]
+  return interval ? { period, interval, dayPrice: Number(interval.price) } : null
+})
+const pricingError = computed(() => {
+  if (!data.value || rentalDays.value < 1)
+    return t('Drop-off must be later than pickup.', 'يجب أن يكون وقت التسليم بعد وقت الاستلام.')
+  if (rentalDays.value > 365)
+    return t('Rental may not exceed 365 days.', 'مدة الإيجار لا يمكن أن تتجاوز 365 يومًا.')
+  if (!matchedPricing.value)
+    return t(
+      'This date or duration is not covered by the car rental pricing.',
+      'هذا التاريخ أو عدد الأيام غير مشمول بتسعيرة تأجير السيارة.',
+    )
+  return ''
+})
+const effectiveDayPrice = computed(() => matchedPricing.value?.dayPrice ?? 0)
 const pickedItems = computed(() =>
   (data.value?.extra_items || []).filter((x) => chosen.value.includes(x.id)),
 )
@@ -119,7 +150,7 @@ const extrasTotal = computed(() =>
 )
 const total = computed(
   () =>
-    Number(record.value.day_price || 0) * rentalDays.value +
+    effectiveDayPrice.value * rentalDays.value +
     extrasTotal.value +
     Number(record.value.tax || 0) +
     Number(record.value.branch_fee || 0) +
@@ -127,14 +158,14 @@ const total = computed(
 )
 const companyTotal = computed(
   () =>
-    Number(record.value.day_company_price || 0) * rentalDays.value +
+    effectiveDayPrice.value * rentalDays.value +
     extrasTotal.value +
     Number(record.value.tax || 0) +
     Number(record.value.branch_fee || 0) +
     Number(record.value.extra_km_price || 0),
 )
 const summaryFields = computed(() => [
-  [t('Daily Rental Price', 'سعر الإيجار اليومي'), money(record.value.day_price)],
+  [t('Daily Rental Price', 'سعر الإيجار اليومي'), money(effectiveDayPrice.value)],
   [t('Number of Days', 'عدد الأيام'), rentalDays.value],
   [t('Extra Items', 'الإضافات'), money(extrasTotal.value)],
   [t('Extra Km Price', 'سعر الكيلومترات الإضافية'), money(record.value.extra_km_price)],
@@ -166,11 +197,8 @@ function goBack() {
 async function submit() {
   if (saving.value) return
   error.value = ''
-  if (rentalDays.value < 1) {
-    error.value = t(
-      'Drop-off must be later than pickup.',
-      'يجب أن يكون وقت التسليم بعد وقت الاستلام.',
-    )
+  if (pricingError.value) {
+    error.value = pricingError.value
     tab.value = 'car'
     return
   }
@@ -203,7 +231,7 @@ async function submit() {
           {{ t('Back to Bookings', 'العودة للحجوزات') }}</button
         ><button
           class="primary"
-          :disabled="loading || saving || data?.contract_exists"
+          :disabled="loading || saving || data?.contract_exists || !!pricingError"
           @click="submit"
         >
           {{
@@ -303,11 +331,7 @@ async function submit() {
           <label>{{ t('Drop-off Time', 'وقت التسليم') }}</label
           ><input v-model="dropoffTime" type="time" />
         </div>
-        <p v-if="rentalDays < 1" class="error wide">
-          {{
-            t('Drop-off must be later than pickup.', 'يجب أن يكون وقت التسليم بعد وقت الاستلام.')
-          }}
-        </p>
+        <p v-if="pricingError" class="error wide">{{ pricingError }}</p>
       </div>
       <div v-else-if="tab === 'extras'" class="extra-list">
         <label v-for="item in data.extra_items" :key="item.id" class="extra-row"
@@ -330,7 +354,7 @@ async function submit() {
           </div>
           <div class="summary-field">
             <label>{{ t('Cars Price / Day', 'سعر السيارة / اليوم') }}</label
-            ><input :value="Number(record.day_price || 0).toFixed(2)" readonly />
+            ><input :value="effectiveDayPrice.toFixed(2)" readonly />
           </div>
           <div class="summary-field">
             <label>{{ t('Currency', 'العملة') }}</label
@@ -383,7 +407,12 @@ async function submit() {
           @click="tab = tabs[Math.min(5, tabs.indexOf(tab) + 1)]"
         >
           {{ t('Next', 'التالي') }}</button
-        ><button v-else class="primary" :disabled="saving || data.contract_exists" @click="submit">
+        ><button
+          v-else
+          class="primary"
+          :disabled="saving || data.contract_exists || !!pricingError"
+          @click="submit"
+        >
           {{ t('Create Contract & Relay', 'إنشاء العقد وتسليم السيارة') }}
         </button>
       </div>
