@@ -29,6 +29,7 @@ const pages = {
   '/rent/terms-and-conditions': () => import('./views/RentTermsAndConditionsView.vue'),
   '/rent/payments': () => import('./views/PaymentsView.vue'),
   '/rent/traffic-violations': () => import('./views/TrafficViolationsView.vue'),
+  '/rent/lawsuits': () => import('./views/LawsuitsView.vue'),
 }
 
 const children = [
@@ -210,6 +211,9 @@ const children = [
     path: 'traffic-violations/:id/edit',
     component: () => import('./views/TrafficViolationFormView.vue'),
   },
+  { path: 'lawsuits/create', component: () => import('./views/LawsuitFormView.vue') },
+  { path: 'lawsuits/:id/edit', component: () => import('./views/LawsuitFormView.vue') },
+  { path: 'lawsuits/:id/view', component: () => import('./views/LawsuitFormView.vue') },
 ]
 
 export default {
