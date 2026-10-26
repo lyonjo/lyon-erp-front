@@ -28,6 +28,7 @@ const pages = {
   '/rent/contracts/rental': () => import('./views/RentalContractsView.vue'),
   '/rent/terms-and-conditions': () => import('./views/RentTermsAndConditionsView.vue'),
   '/rent/payments': () => import('./views/PaymentsView.vue'),
+  '/rent/traffic-violations': () => import('./views/TrafficViolationsView.vue'),
 }
 
 const children = [
@@ -196,6 +197,18 @@ const children = [
     path: 'payments/:id/edit',
     component: () => import('./views/PaymentEditView.vue'),
     meta: { title: 'Edit Payment' },
+  },
+  {
+    path: 'traffic-violations/create',
+    component: () => import('./views/TrafficViolationFormView.vue'),
+  },
+  {
+    path: 'traffic-violations/:id/view',
+    component: () => import('./views/TrafficViolationFormView.vue'),
+  },
+  {
+    path: 'traffic-violations/:id/edit',
+    component: () => import('./views/TrafficViolationFormView.vue'),
   },
 ]
 
