@@ -54,6 +54,16 @@ function vehicleName(b) {
 function navigate(id, action) {
   router.push(`/rent/contracts/rental/${id}/${action}`)
 }
+function goPreviousPage() {
+  if (page.value <= 1 || loading.value) return
+  page.value -= 1
+  load()
+}
+function goNextPage() {
+  if (page.value >= lastPage.value || loading.value) return
+  page.value += 1
+  load()
+}
 </script>
 <template>
   <section class="contracts-page" :dir="locale === 'ar' ? 'rtl' : 'ltr'">
@@ -125,25 +135,9 @@ function navigate(id, action) {
     <div class="footer">
       <span>{{ total }} {{ t('records', 'سجل') }}</span>
       <div>
-        <button
-          :disabled="page <= 1"
-          @click="
-            page--
-            load()
-          "
-        >
-          {{ t('Previous', 'السابق') }}
-        </button>
+        <button :disabled="page <= 1" @click="goPreviousPage">{{ t('Previous', 'السابق') }}</button>
         {{ page }} / {{ lastPage }}
-        <button
-          :disabled="page >= lastPage"
-          @click="
-            page++
-            load()
-          "
-        >
-          {{ t('Next', 'التالي') }}
-        </button>
+        <button :disabled="page >= lastPage" @click="goNextPage">{{ t('Next', 'التالي') }}</button>
       </div>
     </div>
   </section>
