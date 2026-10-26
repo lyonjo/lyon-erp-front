@@ -25,6 +25,7 @@ const customerCompanySearch = ref('')
 const customerCompanies = ref([])
 const companyListOpen = ref(false)
 const data = ref(null)
+const soldCarCustomerName = ref('')
 const banks = ref([])
 const form = ref(blankForm())
 const showDetails = ref(null)
@@ -79,6 +80,7 @@ function chooseCompany(c) {
   lookup()
 }
 function resetSource() {
+  soldCarCustomerName.value = ''
   data.value = null
   refId.value = ''
   banks.value = []
@@ -88,6 +90,7 @@ function resetSource() {
 }
 watch(paymentFor, resetSource)
 watch(refId, () => {
+  soldCarCustomerName.value = ''
   data.value = null
   banks.value = []
 })
@@ -154,6 +157,7 @@ async function lookup() {
       params: { payment_for: paymentFor.value, reference_id: refId.value },
     })
     data.value = r.data.data
+    if (paymentFor.value === 'sold car') soldCarCustomerName.value = data.value.name || ''
     await loadBanks(data.value.company_id)
   } catch (e) {
     error.value = errorMessage(e)
@@ -163,6 +167,10 @@ async function lookup() {
 }
 async function save() {
   if (!data.value) return
+  if (paymentFor.value === 'sold car' && !soldCarCustomerName.value.trim()) {
+    error.value = tr('Enter the sold-car customer name.', 'أدخل اسم مشتري السيارة.')
+    return
+  }
   if (Number(form.value.payment_value) <= 0 || Number(form.value.payment_value) > remaining.value) {
     error.value = tr(
       'Enter a valid amount within the remaining balance.',
@@ -177,6 +185,9 @@ async function save() {
     const r = await api.post('/rent/payments', {
       payment_for: paymentFor.value,
       reference_id: Number(refId.value),
+      ...(paymentFor.value === 'sold car'
+        ? { sold_car_customer_name: soldCarCustomerName.value.trim() }
+        : {}),
       ...form.value,
       payment_value: Number(form.value.payment_value),
     })
@@ -268,7 +279,24 @@ onMounted(loadPayments)
             </div>
           </div>
           <template v-if="data">
-            <div class="pay-field">
+            <div class="pay-field" v-if="paymentFor === 'sold car'">
+              <label>{{ tr('Sold Car Customer Name', 'اسم مشتري السيارة') }} *</label>
+              <input
+                v-model="soldCarCustomerName"
+                :readonly="data.name_locked"
+                :placeholder="
+                  tr('Enter customer name on the first payment', 'أدخل اسم المشتري في أول دفعة')
+                "
+                maxlength="190"
+              />
+              <small v-if="data.name_locked" class="pay-name-help">{{
+                tr(
+                  'Saved from an earlier payment; cannot be changed here.',
+                  'تم حفظ الاسم من دفعة سابقة ولا يمكن تعديله هنا.',
+                )
+              }}</small>
+            </div>
+            <div class="pay-field" v-else>
               <label>{{ tr('Customer / Company Name', 'اسم العميل / الشركة') }}</label
               ><input :value="data.name" readonly />
             </div>
@@ -641,5 +669,11 @@ onMounted(loadPayments)
 }
 .pay-back:hover {
   background: #eef6fc;
+}
+</style>
+
+<style scoped>
+.pay-name-help {
+  color: #64748b !important;
 }
 </style>
