@@ -26,6 +26,7 @@ const pages = {
   '/rent/available-car': () => import('./views/AvailableCarsView.vue'),
   '/rent/cars-expected-back': () => import('./views/CarExpectedBackView.vue'),
   '/rent/contracts/rental': () => import('./views/RentalContractsView.vue'),
+  '/rent/terms-and-conditions': () => import('./views/RentTermsAndConditionsView.vue'),
 }
 
 const children = [
