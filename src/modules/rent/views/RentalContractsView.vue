@@ -112,19 +112,68 @@ function goNextPage() {
             <td>
               <div class="actions">
                 <button @click="navigate(c.id, 'view')">
-                  <span>ⓘ</span> {{ t('Details', 'التفاصيل') }}
+                  <svg
+                    class="action-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 11v5M12 8h.01" />
+                  </svg>
+                  {{ t('Details', 'التفاصيل') }}
                 </button>
                 <button @click="navigate(c.id, 'invoice')">
-                  <span>▣</span> {{ t('Invoice', 'الفاتورة') }}
+                  <svg
+                    class="action-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="5" y="3" width="14" height="18" rx="2" />
+                    <path d="M8 8h8M8 12h8M8 16h5" />
+                  </svg>
+                  {{ t('Invoice', 'الفاتورة') }}
                 </button>
                 <button v-if="c.status === 'open'" @click="navigate(c.id, 'edit')">
-                  <span>✎</span> {{ t('Edit', 'تعديل') }}
+                  <svg
+                    class="action-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="m15 5 4 4M4 20l4-.8L19 8a2.8 2.8 0 0 0-4-4L4 15l-.8 5Z" />
+                  </svg>
+                  {{ t('Edit', 'تعديل') }}
                 </button>
                 <button @click="navigate(c.id, 'view')">
-                  <span>◉</span> {{ t('View', 'عرض') }}
+                  <svg
+                    class="action-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  {{ t('View', 'عرض') }}
                 </button>
                 <button @click="navigate(c.id, 'video')">
-                  <span>▣</span> {{ t('Take Video', 'تصوير فيديو') }}
+                  <svg
+                    class="action-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="2" y="5" width="14" height="14" rx="2" />
+                    <path d="m16 10 6-4v12l-6-4" />
+                  </svg>
+                  {{ t('Take Video', 'تصوير فيديو') }}
                 </button>
               </div>
             </td>
@@ -200,13 +249,24 @@ tr:last-child td {
   align-items: center;
   flex-wrap: wrap;
 }
+.action-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin-inline-end: 3px;
+}
 .actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   border: 0;
   background: transparent;
   color: #163351;
   cursor: pointer;
   font-size: 12px;
   padding: 3px 0;
+  font-weight: 500;
 }
 .actions button:hover {
   text-decoration: underline;

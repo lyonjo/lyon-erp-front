@@ -163,10 +163,29 @@ async function save(close) {
     tab.value = 'car'
     return
   }
-  if (close && (kmIn.value === '' || kmIn.value === null)) {
+  const kmOutNumber = Number(contract.value.km_out || 0)
+  const kmInProvided = kmIn.value !== '' && kmIn.value !== null && kmIn.value !== undefined
+  const kmInNumber = kmInProvided ? Number(kmIn.value) : null
+  if (kmInProvided && (!Number.isInteger(kmInNumber) || kmInNumber < 0)) {
     error.value = t(
-      'KM In is required to close the contract.',
-      'كيلومترات العودة مطلوبة لإغلاق العقد.',
+      'KM In must be a non-negative whole number.',
+      'يجب أن تكون كيلومترات العودة رقمًا صحيحًا غير سالب.',
+    )
+    tab.value = 'car'
+    return
+  }
+  if (close && (!kmInProvided || kmInNumber <= kmOutNumber)) {
+    error.value = t(
+      'To close the contract, KM In must be greater than KM Out.',
+      'لإغلاق العقد يجب أن تكون كيلومترات العودة أكبر من كيلومترات الخروج.',
+    )
+    tab.value = 'car'
+    return
+  }
+  if (!close && kmInProvided && kmInNumber !== 0 && kmInNumber < kmOutNumber) {
+    error.value = t(
+      'KM In cannot be less than KM Out unless empty or zero.',
+      'لا يمكن أن تقل كيلومترات العودة عن كيلومترات الخروج إلا إذا كانت فارغة أو صفرًا.',
     )
     tab.value = 'car'
     return
