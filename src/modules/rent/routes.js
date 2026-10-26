@@ -30,6 +30,7 @@ const pages = {
   '/rent/payments': () => import('./views/PaymentsView.vue'),
   '/rent/traffic-violations': () => import('./views/TrafficViolationsView.vue'),
   '/rent/lawsuits': () => import('./views/LawsuitsView.vue'),
+  '/rent/extra-money': () => import('./views/ExtraMoneyView.vue'),
 }
 
 const children = [
@@ -214,6 +215,9 @@ const children = [
   { path: 'lawsuits/create', component: () => import('./views/LawsuitFormView.vue') },
   { path: 'lawsuits/:id/edit', component: () => import('./views/LawsuitFormView.vue') },
   { path: 'lawsuits/:id/view', component: () => import('./views/LawsuitFormView.vue') },
+  { path: 'extra-money/create', component: () => import('./views/ExtraMoneyFormView.vue') },
+  { path: 'extra-money/:id/edit', component: () => import('./views/ExtraMoneyFormView.vue') },
+  { path: 'extra-money/:id/view', component: () => import('./views/ExtraMoneyFormView.vue') },
 ]
 
 export default {
