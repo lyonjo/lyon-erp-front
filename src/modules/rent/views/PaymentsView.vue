@@ -83,11 +83,14 @@ async function confirmDelete() {
 async function openPaymentReport() {
   reportNotice.value = ''
   error.value = ''
-  if (!report.company_id) {
+  if (!report.value.company_id) {
     reportNotice.value = tr('Select a company.', 'اختر الشركة.')
     return
   }
-  if (reportTab.value === 'box' && (!report.from || !report.to || report.to < report.from)) {
+  if (
+    reportTab.value === 'box' &&
+    (!report.value.from || !report.value.to || report.value.to < report.value.from)
+  ) {
     reportNotice.value = tr(
       'Select a valid From and To date range.',
       'اختر تاريخ بداية ونهاية صحيحين.',
@@ -108,9 +111,9 @@ async function openPaymentReport() {
     const response = await api.get('/rent/payments/report', {
       params: {
         mode: reportTab.value,
-        company_id: report.company_id,
-        ...(report.user_id ? { user_id: report.user_id } : {}),
-        ...(reportTab.value === 'box' ? { from: report.from, to: report.to } : {}),
+        company_id: report.value.company_id,
+        ...(report.value.user_id ? { user_id: report.value.user_id } : {}),
+        ...(reportTab.value === 'box' ? { from: report.value.from, to: report.value.to } : {}),
       },
       responseType: 'blob',
     })
