@@ -80,11 +80,60 @@ async function confirmDelete() {
     deleting.value = false
   }
 }
-function reportNotReady() {
-  reportNotice.value = tr(
-    'The report PDF will be implemented in the next phase.',
-    'سيتم تنفيذ تقرير PDF في المرحلة القادمة.',
+async function openPaymentReport() {
+  reportNotice.value = ''
+  error.value = ''
+  if (!report.company_id) {
+    reportNotice.value = tr('Select a company.', 'اختر الشركة.')
+    return
+  }
+  if (reportTab.value === 'box' && (!report.from || !report.to || report.to < report.from)) {
+    reportNotice.value = tr(
+      'Select a valid From and To date range.',
+      'اختر تاريخ بداية ونهاية صحيحين.',
+    )
+    return
+  }
+  // Open before the async request to avoid popup blockers.
+  const tabWindow = window.open('', '_blank')
+  if (!tabWindow) {
+    reportNotice.value = tr('Allow popups for this site.', 'اسمح بالنوافذ المنبثقة لهذا الموقع.')
+    return
+  }
+  tabWindow.document.write(
+    '<html><body style="font-family:sans-serif;padding:24px">Loading PDF...</body></html>',
   )
+  reportBusy.value = true
+  try {
+    const response = await api.get('/rent/payments/report', {
+      params: {
+        mode: reportTab.value,
+        company_id: report.company_id,
+        ...(report.user_id ? { user_id: report.user_id } : {}),
+        ...(reportTab.value === 'box' ? { from: report.from, to: report.to } : {}),
+      },
+      responseType: 'blob',
+    })
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    tabWindow.location.replace(url)
+    // Keep the object URL alive while the browser's PDF viewer reads it.
+    setTimeout(() => URL.revokeObjectURL(url), 120000)
+  } catch (e) {
+    tabWindow.close()
+    if (e?.response?.data instanceof Blob) {
+      try {
+        const payload = JSON.parse(await e.response.data.text())
+        reportNotice.value = payload.message || tr('PDF request failed.', 'فشل طلب PDF.')
+      } catch {
+        reportNotice.value = errorMessage(e)
+      }
+    } else {
+      reportNotice.value = errorMessage(e)
+    }
+  } finally {
+    reportBusy.value = false
+  }
 }
 
 function blankForm() {
@@ -379,11 +428,11 @@ onMounted(loadPayments)
           </div>
           <div class="report-form">
             <div class="pay-grid">
-              <div class="pay-field">
+              <div v-if="reportTab === 'box'" class="pay-field">
                 <label>{{ tr('From', 'من') }}</label
                 ><input v-model="report.from" type="date" />
               </div>
-              <div class="pay-field">
+              <div v-if="reportTab === 'box'" class="pay-field">
                 <label>{{ tr('To', 'إلى') }}</label
                 ><input v-model="report.to" type="date" :min="report.from || undefined" />
               </div>
@@ -406,7 +455,12 @@ onMounted(loadPayments)
                 </select>
               </div>
             </div>
-            <button type="button" class="report-submit" @click="reportNotReady">
+            <button
+              type="button"
+              class="report-submit"
+              @click="openPaymentReport"
+              :disabled="reportBusy"
+            >
               {{ tr('View Report', 'عرض التقرير') }}
             </button>
             <p v-if="reportNotice" class="report-notice">{{ reportNotice }}</p>
