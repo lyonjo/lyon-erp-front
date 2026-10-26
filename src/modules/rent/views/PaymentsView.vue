@@ -28,6 +28,8 @@ const data = ref(null)
 const banks = ref([])
 const form = ref(blankForm())
 const showDetails = ref(null)
+const deleteTarget = ref(null)
+const deleting = ref(false)
 const reportTab = ref('box')
 const report = ref({ from: '', to: '', company_id: '', user_id: '' })
 const reportCompanies = ref([])
@@ -48,6 +50,35 @@ async function loadReportOptions() {
 }
 function openNewPayment() {
   router.push('/rent/payments/new')
+}
+function editPayment(row) {
+  router.push(`/rent/payments/${row.id}/edit`)
+}
+function askDelete(row) {
+  deleteTarget.value = row
+}
+function cancelDelete() {
+  if (!deleting.value) deleteTarget.value = null
+}
+async function confirmDelete() {
+  if (!deleteTarget.value || deleting.value) return
+  deleting.value = true
+  error.value = ''
+  success.value = ''
+  try {
+    await api.delete(`/rent/payments/${deleteTarget.value.id}`)
+    deleteTarget.value = null
+    success.value = tr('Payment deleted successfully.', 'تم حذف الدفعة بنجاح.')
+    await loadPayments()
+    if (page.value > lastPage.value) {
+      page.value = lastPage.value
+      await loadPayments()
+    }
+  } catch (e) {
+    error.value = errorMessage(e)
+  } finally {
+    deleting.value = false
+  }
 }
 function reportNotReady() {
   reportNotice.value = tr(
@@ -287,15 +318,29 @@ onMounted(loadPayments)
                             : '—'
                   }}
                 </td>
-                <td>{{ p.customer?.name || p.customer_company?.name || '—' }}</td>
+                <td>
+                  {{
+                    p.customer_name ||
+                    p.sold_car_customer_name ||
+                    p.customer?.name ||
+                    p.customer_company?.name ||
+                    '—'
+                  }}
+                </td>
                 <td>{{ readableType(p.payment_for) }}</td>
                 <td>{{ money(p.company_value) }}</td>
                 <td>{{ p.bank?.name || '—' }}</td>
                 <td>{{ p.user_name || '—' }}</td>
                 <td>
-                  <button class="pay-action" @click="showDetails = p">
-                    ◉ {{ tr('Details', 'تفاصيل') }}
-                  </button>
+                  <div class="pay-actions">
+                    <button type="button" class="pay-action" @click="showDetails = p">
+                      ◉ {{ tr('Details', 'تفاصيل') }}</button
+                    ><button type="button" class="pay-action" @click="editPayment(p)">
+                      ✎ {{ tr('Edit', 'تعديل') }}</button
+                    ><button type="button" class="pay-action pay-danger" @click="askDelete(p)">
+                      ▤ {{ tr('Delete', 'حذف') }}
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -380,6 +425,34 @@ onMounted(loadPayments)
         <p>{{ tr('Payment method', 'طريقة الدفع') }}: {{ showDetails.payment_type }}</p>
         <p>{{ tr('Bank', 'البنك') }}: {{ showDetails.bank?.name || '—' }}</p>
         <button class="pay-blue" @click="showDetails = null">{{ tr('Close', 'إغلاق') }}</button>
+      </section>
+    </div>
+    <div v-if="deleteTarget" class="pay-modal" @click.self="cancelDelete">
+      <section>
+        <div class="pay-modal-header">
+          <h3>{{ tr('Delete Payment', 'حذف الدفعة') }} #{{ deleteTarget.id }}</h3>
+          <button type="button" @click="cancelDelete">×</button>
+        </div>
+        <p>
+          {{
+            tr(
+              'Are you sure you want to delete this payment? This will change the outstanding balance.',
+              'هل أنت متأكد من حذف هذه الدفعة؟ سيؤثر الحذف على المبلغ المتبقي.',
+            )
+          }}
+        </p>
+        <div class="pay-delete-footer">
+          <button type="button" class="pay-cancel" :disabled="deleting" @click="cancelDelete">
+            {{ tr('Cancel', 'إلغاء') }}</button
+          ><button
+            type="button"
+            class="pay-delete-confirm"
+            :disabled="deleting"
+            @click="confirmDelete"
+          >
+            {{ deleting ? tr('Deleting...', 'جارٍ الحذف...') : tr('Delete', 'حذف') }}
+          </button>
+        </div>
       </section>
     </div>
   </main>
@@ -715,5 +788,45 @@ onMounted(loadPayments)
   .report-heading {
     justify-content: center;
   }
+}
+</style>
+
+<style scoped>
+.pay-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  flex-wrap: wrap;
+}
+.pay-actions .pay-action {
+  padding: 0;
+  color: #122d4a;
+}
+.pay-actions .pay-danger {
+  color: #c92336;
+}
+.pay-delete-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+.pay-delete-footer button {
+  padding: 8px 19px;
+  border-radius: 18px;
+  cursor: pointer;
+}
+.pay-cancel {
+  border: 1px solid #ced9e6;
+  background: #fff;
+}
+.pay-delete-confirm {
+  border: 0;
+  background: #cb293b;
+  color: #fff;
+}
+.pay-delete-footer button:disabled {
+  opacity: 0.5;
 }
 </style>

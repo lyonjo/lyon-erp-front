@@ -192,6 +192,11 @@ const children = [
     component: () => import('./views/PaymentNewView.vue'),
     meta: { title: 'New Payment' },
   },
+  {
+    path: 'payments/:id/edit',
+    component: () => import('./views/PaymentEditView.vue'),
+    meta: { title: 'Edit Payment' },
+  },
 ]
 
 export default {
