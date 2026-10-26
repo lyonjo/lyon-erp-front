@@ -25,6 +25,7 @@ const pages = {
   '/rent/car-rentered': () => import('./views/ReservationCarsView.vue'),
   '/rent/available-car': () => import('./views/AvailableCarsView.vue'),
   '/rent/cars-expected-back': () => import('./views/CarExpectedBackView.vue'),
+  '/rent/contracts/rental': () => import('./views/RentalContractsView.vue'),
 }
 
 const children = [
@@ -168,6 +169,22 @@ const children = [
   },
   { path: 'booking/:id', component: () => import('./views/BookingRentShowView.vue') },
   { path: 'car-rentered/:id', component: () => import('./views/ReservationCarDetailsView.vue') },
+  {
+    path: 'contracts/rental/:id/edit',
+    component: () => import('./views/RentalContractFormView.vue'),
+  },
+  {
+    path: 'contracts/rental/:id/view',
+    component: () => import('./views/RentalContractFormView.vue'),
+  },
+  {
+    path: 'contracts/rental/:id/invoice',
+    component: () => import('./views/RentalContractInvoiceView.vue'),
+  },
+  {
+    path: 'contracts/rental/:id/video',
+    component: () => import('./views/RentalContractVideoView.vue'),
+  },
 ]
 
 export default {
