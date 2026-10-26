@@ -14,6 +14,8 @@ const tab = ref('customer'),
   error = ref(''),
   data = ref(null)
 const chosen = ref([])
+const dropoffDate = ref(''),
+  dropoffTime = ref('')
 const driver = ref({
   name: '',
   license_number: '',
@@ -90,27 +92,34 @@ const carFields = computed(() => [
   [t('Year', 'سنة الصنع'), vehicle.value.model_year],
   [t('Pickup Date', 'تاريخ الاستلام'), record.value.start_date],
   [t('Pickup Time', 'وقت الاستلام'), record.value.start_time],
-  [t('Drop-off Date', 'تاريخ التسليم'), record.value.end_date],
-  [t('Drop-off Time', 'وقت التسليم'), record.value.end_time],
   [t('Pickup Location', 'مكان الاستلام'), record.value.pick_up_location],
   [t('Return Location', 'مكان التسليم'), record.value.return_location],
-  [t('Rental Period', 'مدة الإيجار'), record.value.total_days],
+  [t('Rental Period', 'مدة الإيجار'), rentalDays.value],
   [t('Km Out', 'كيلومترات الخروج'), vehicle.value.current_km],
   [t('Km In', 'كيلومترات العودة'), '—'],
 ])
+const rentalDays = computed(() => {
+  const startDate = record.value.start_date,
+    startTime = record.value.start_time
+  if (!startDate || !startTime || !dropoffDate.value || !dropoffTime.value)
+    return Number(record.value.total_days || 0)
+  const start = new Date(`${String(startDate).slice(0, 10)}T${String(startTime).slice(0, 5)}:00`)
+  const end = new Date(`${dropoffDate.value}T${dropoffTime.value}:00`)
+  const millis = end.getTime() - start.getTime()
+  return Number.isFinite(millis) && millis > 0 ? Math.max(1, Math.ceil(millis / 86400000)) : 0
+})
 const pickedItems = computed(() =>
   (data.value?.extra_items || []).filter((x) => chosen.value.includes(x.id)),
 )
 const extrasTotal = computed(() =>
   pickedItems.value.reduce(
-    (sum, i) =>
-      sum + Number(i.price || 0) * (i.is_daily ? Number(record.value.total_days || 1) : 1),
+    (sum, i) => sum + Number(i.price || 0) * (i.is_daily ? rentalDays.value : 1),
     0,
   ),
 )
 const total = computed(
   () =>
-    Number(record.value.day_price || 0) * Number(record.value.total_days || 0) +
+    Number(record.value.day_price || 0) * rentalDays.value +
     extrasTotal.value +
     Number(record.value.tax || 0) +
     Number(record.value.branch_fee || 0) +
@@ -118,7 +127,7 @@ const total = computed(
 )
 const companyTotal = computed(
   () =>
-    Number(record.value.day_company_price || 0) * Number(record.value.total_days || 0) +
+    Number(record.value.day_company_price || 0) * rentalDays.value +
     extrasTotal.value +
     Number(record.value.tax || 0) +
     Number(record.value.branch_fee || 0) +
@@ -126,7 +135,7 @@ const companyTotal = computed(
 )
 const summaryFields = computed(() => [
   [t('Daily Rental Price', 'سعر الإيجار اليومي'), money(record.value.day_price)],
-  [t('Number of Days', 'عدد الأيام'), record.value.total_days],
+  [t('Number of Days', 'عدد الأيام'), rentalDays.value],
   [t('Extra Items', 'الإضافات'), money(extrasTotal.value)],
   [t('Extra Km Price', 'سعر الكيلومترات الإضافية'), money(record.value.extra_km_price)],
   [t('Tax', 'الضريبة'), money(record.value.tax)],
@@ -142,6 +151,8 @@ async function load() {
     const response = await api.get(`/rent/bookings/${route.params.id}/relay`)
     data.value = response.data.data
     chosen.value = (record.value.extra_items || []).map((i) => i.id)
+    dropoffDate.value = String(record.value.end_date || '').slice(0, 10)
+    dropoffTime.value = String(record.value.end_time || '').slice(0, 5)
   } catch (e) {
     error.value = e.response?.data?.message || t('Could not load booking', 'تعذر تحميل الحجز')
   } finally {
@@ -155,11 +166,21 @@ function goBack() {
 async function submit() {
   if (saving.value) return
   error.value = ''
+  if (rentalDays.value < 1) {
+    error.value = t(
+      'Drop-off must be later than pickup.',
+      'يجب أن يكون وقت التسليم بعد وقت الاستلام.',
+    )
+    tab.value = 'car'
+    return
+  }
   saving.value = true
   try {
     await api.post(`/rent/bookings/${route.params.id}/relay`, {
       extra_item_ids: chosen.value,
       additional_driver: driver.value,
+      end_date: dropoffDate.value,
+      end_time: dropoffTime.value,
     })
     goBack()
   } catch (e) {
@@ -176,7 +197,7 @@ async function submit() {
 <template>
   <section class="relay-page" :dir="locale === 'ar' ? 'rtl' : 'ltr'">
     <div class="relay-heading">
-      <h2>{{ t('Relay Booking', 'تسليم الحجز') }} #{{ route.params.id }}</h2>
+      <h2>{{ t('Add Contract', 'إضافة عقد') }}</h2>
       <div class="actions">
         <button class="secondary" @click="goBack">
           {{ t('Back to Bookings', 'العودة للحجوزات') }}</button
@@ -270,6 +291,23 @@ async function submit() {
           <label>{{ label }}</label
           ><input :value="text(value)" readonly />
         </div>
+        <div class="field">
+          <label>{{ t('Drop-off Date', 'تاريخ التسليم') }}</label
+          ><input
+            v-model="dropoffDate"
+            type="date"
+            :min="String(record.start_date || '').slice(0, 10)"
+          />
+        </div>
+        <div class="field">
+          <label>{{ t('Drop-off Time', 'وقت التسليم') }}</label
+          ><input v-model="dropoffTime" type="time" />
+        </div>
+        <p v-if="rentalDays < 1" class="error wide">
+          {{
+            t('Drop-off must be later than pickup.', 'يجب أن يكون وقت التسليم بعد وقت الاستلام.')
+          }}
+        </p>
       </div>
       <div v-else-if="tab === 'extras'" class="extra-list">
         <label v-for="item in data.extra_items" :key="item.id" class="extra-row"
@@ -280,14 +318,56 @@ async function submit() {
           ></label
         >
       </div>
-      <div v-else class="summary">
-        <div v-for="[label, value] in summaryFields" :key="label" class="summary-row">
-          <span>{{ label }}</span
-          ><strong>{{ text(value) }}</strong>
-        </div>
-        <div class="summary-row muted">
-          <span>{{ t('Company Total', 'إجمالي الشركة') }}</span
-          ><strong>{{ money(companyTotal) }}</strong>
+      <div v-else class="summary-form">
+        <div class="summary-grid">
+          <div class="summary-field">
+            <label>{{ t('Number of Days', 'عدد الأيام') }}</label
+            ><input :value="rentalDays" readonly />
+          </div>
+          <div class="summary-field">
+            <label>{{ t('Currency', 'العملة') }}</label
+            ><input :value="data.currency" readonly />
+          </div>
+          <div class="summary-field">
+            <label>{{ t('Cars Price / Day', 'سعر السيارة / اليوم') }}</label
+            ><input :value="Number(record.day_price || 0).toFixed(2)" readonly />
+          </div>
+          <div class="summary-field">
+            <label>{{ t('Currency', 'العملة') }}</label
+            ><input :value="data.currency" readonly />
+          </div>
+          <div class="summary-field">
+            <label>{{ t('Extra Items', 'الإضافات') }}</label
+            ><input :value="extrasTotal.toFixed(2)" readonly />
+          </div>
+          <div class="summary-field">
+            <label>{{ t('Currency', 'العملة') }}</label
+            ><input :value="data.currency" readonly />
+          </div>
+          <div class="summary-field">
+            <label>{{ t('Extra Km Price', 'سعر الكيلومتر الإضافي') }}</label
+            ><input :value="Number(record.extra_km_price || 0).toFixed(2)" readonly />
+          </div>
+          <div class="summary-field">
+            <label>{{ t('Currency', 'العملة') }}</label
+            ><input :value="data.currency" readonly />
+          </div>
+          <div class="summary-field">
+            <label>{{ t('Total Price', 'السعر الإجمالي') }}</label
+            ><input :value="total.toFixed(2)" readonly />
+          </div>
+          <div class="summary-field">
+            <label>{{ t('Company Total', 'إجمالي الشركة') }}</label
+            ><input :value="companyTotal.toFixed(2)" readonly />
+          </div>
+          <div class="summary-field">
+            <label>{{ t('Pickup Branch', 'فرع الاستلام') }}</label
+            ><input :value="text(record.pick_up_location)" readonly />
+          </div>
+          <div class="summary-field">
+            <label>{{ t('Receiving Branch', 'فرع التسليم') }}</label
+            ><input :value="text(record.return_location)" readonly />
+          </div>
         </div>
       </div>
       <div class="bottom">
@@ -396,7 +476,8 @@ async function submit() {
   min-width: 0;
 }
 .field.wide,
-.note.wide {
+.note.wide,
+.error.wide {
   grid-column: 1/-1;
 }
 .field label {
@@ -444,6 +525,35 @@ async function submit() {
   width: min(710px, 100%);
   margin: auto;
 }
+.summary-form {
+  width: min(710px, 100%);
+  margin: auto;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px 18px;
+}
+.summary-field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.summary-field label {
+  font-size: 13px;
+  font-weight: 650;
+}
+.summary-field input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  border: 1px solid #cbd5df;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: #f8fafc;
+  color: #133352;
+}
 .summary-row {
   display: flex;
   justify-content: space-between;
@@ -473,7 +583,8 @@ async function submit() {
   border-radius: 8px;
 }
 @media (max-width: 640px) {
-  .form-grid {
+  .form-grid,
+  .summary-grid {
     grid-template-columns: 1fr;
   }
   .tabs {
