@@ -126,15 +126,21 @@ onMounted(load)
               <th>{{ t('Amount', 'المبلغ') }}</th>
               <th v-if="kind !== 'discounts'">{{ t('Date', 'التاريخ') }}</th>
               <th v-else>{{ t('Approval', 'الاعتماد') }}</th>
+              <th v-if="kind === 'discounts'">{{ t('Created By', 'أنشأه') }}</th>
+              <th v-if="kind === 'discounts'">{{ t('Approved By', 'اعتمده') }}</th>
               <th>{{ t('Actions', 'الإجراءات') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td colspan="6">{{ t('Loading...', 'جار التحميل...') }}</td>
+              <td :colspan="kind === 'discounts' ? 8 : 6">
+                {{ t('Loading...', 'جار التحميل...') }}
+              </td>
             </tr>
             <tr v-else-if="!rows.length">
-              <td colspan="6">{{ t('No records', 'لا توجد بيانات') }}</td>
+              <td :colspan="kind === 'discounts' ? 8 : 6">
+                {{ t('No records', 'لا توجد بيانات') }}
+              </td>
             </tr>
             <tr v-for="r in rows" :key="r.id">
               <td>{{ r.id }}</td>
@@ -145,6 +151,8 @@ onMounted(load)
               <td v-else>
                 {{ r.is_approved ? t('Approved', 'معتمد') : t('Pending', 'بانتظار الاعتماد') }}
               </td>
+              <td v-if="kind === 'discounts'">{{ r.creator_name || '—' }}</td>
+              <td v-if="kind === 'discounts'">{{ (r.approver_names || []).join(', ') || '—' }}</td>
               <td class="actions">
                 <button @click="nav(`/${r.id}/view`)">◉ {{ t('View', 'عرض') }}</button
                 ><button

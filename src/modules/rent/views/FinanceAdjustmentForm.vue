@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
+import FinanceSearchSelect from '../components/FinanceSearchSelect.vue'
 const props = defineProps({ kind: { type: String, required: true } })
 const route = useRoute(),
   router = useRouter(),
@@ -56,6 +57,11 @@ async function load() {
       const r = await api.get(`${base.value}/${id.value}`)
       const v = r.data.data || {}
       form.value = { ...form.value, ...v, date: String(v.date || '').slice(0, 10) }
+      context.value = {
+        id: v.contract_id,
+        customer_name: v.customer_name,
+        company_name: v.company_name,
+      }
     }
     await loadContracts()
     await loadCars()
@@ -68,7 +74,8 @@ async function load() {
 }
 function syncContext() {
   context.value =
-    contracts.value.find((c) => Number(c.id) === Number(form.value.contract_id)) || null
+    contracts.value.find((c) => Number(c.id) === Number(form.value.contract_id)) ||
+    (Number(context.value?.id) === Number(form.value.contract_id) ? context.value : null)
 }
 async function resolveRental() {
   if (props.kind !== 'gasoline' || !form.value.car_id || !form.value.date || readonly.value) return
@@ -118,6 +125,8 @@ async function save() {
     saving.value = false
   }
 }
+const contractLabel = (c) => `#${c.id} — ${c.customer_name || ''} — ${c.vehicle_number || ''}`
+const carLabel = (c) => String(c.number || c.id)
 let timer
 watch(contractSearch, () => {
   clearTimeout(timer)
@@ -150,17 +159,14 @@ onMounted(load)
       <p v-if="loading">{{ tr('Loading...', 'جار التحميل...') }}</p>
       <div v-else class="fields">
         <label
-          >{{ tr('Contract ID', 'رقم العقد') }} *<input
-            v-model="contractSearch"
-            :placeholder="tr('Search contracts...', 'ابحث عن العقود...')"
+          >{{ tr('Contract ID', 'رقم العقد') }} *<FinanceSearchSelect
+            v-model="form.contract_id"
+            :options="contracts"
             :disabled="readonly"
-          /><select v-model="form.contract_id" :disabled="readonly" required @change="syncContext">
-            <option value="">{{ tr('Select contract', 'اختر عقداً') }}</option>
-            <option v-for="c in contracts" :key="c.id" :value="c.id">
-              #{{ c.id }} — {{ c.customer_name }} — {{ c.vehicle_number }}
-            </option>
-          </select></label
-        >
+            :label-of="contractLabel"
+            :placeholder="tr('Search contracts...', 'ابحث عن العقود...')"
+            @search="contractSearch = $event"
+        /></label>
         <label
           >{{ tr('Customer / Company', 'العميل / الشركة')
           }}<input :value="context?.customer_name || form.customer_name || '—'" disabled
@@ -171,16 +177,14 @@ onMounted(load)
         /></label>
         <template v-if="kind === 'gasoline'"
           ><label
-            >{{ tr('Vehicle No.', 'رقم السيارة') }} *<input
-              v-model="carSearch"
+            >{{ tr('Vehicle No.', 'رقم السيارة') }} *<FinanceSearchSelect
+              v-model="form.car_id"
+              :options="cars"
               :disabled="readonly"
+              :label-of="carLabel"
               :placeholder="tr('Search car...', 'ابحث عن السيارة...')"
-            /><select v-model="form.car_id" :disabled="readonly" required>
-              <option value="">{{ tr('Select car', 'اختر سيارة') }}</option>
-              <option v-for="c in cars" :key="c.id" :value="c.id">{{ c.number }}</option>
-            </select></label
-          ></template
-        >
+              @search="carSearch = $event" /></label
+        ></template>
         <label v-if="kind !== 'discounts'"
           >{{ tr('Date', 'التاريخ') }} *<input
             type="date"
