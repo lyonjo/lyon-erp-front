@@ -31,6 +31,9 @@ const pages = {
   '/rent/traffic-violations': () => import('./views/TrafficViolationsView.vue'),
   '/rent/lawsuits': () => import('./views/LawsuitsView.vue'),
   '/rent/extra-money': () => import('./views/ExtraMoneyView.vue'),
+  '/rent/refunds': () => import('./views/RefundListView.vue'),
+  '/rent/discounts': () => import('./views/DiscountListView.vue'),
+  '/rent/gasoline': () => import('./views/GasolineListView.vue'),
 }
 
 const children = [
@@ -218,6 +221,15 @@ const children = [
   { path: 'extra-money/create', component: () => import('./views/ExtraMoneyFormView.vue') },
   { path: 'extra-money/:id/edit', component: () => import('./views/ExtraMoneyFormView.vue') },
   { path: 'extra-money/:id/view', component: () => import('./views/ExtraMoneyFormView.vue') },
+  { path: 'refunds/create', component: () => import('./views/RefundFormView.vue') },
+  { path: 'refunds/:id/edit', component: () => import('./views/RefundFormView.vue') },
+  { path: 'refunds/:id/view', component: () => import('./views/RefundFormView.vue') },
+  { path: 'discounts/create', component: () => import('./views/DiscountFormView.vue') },
+  { path: 'discounts/:id/edit', component: () => import('./views/DiscountFormView.vue') },
+  { path: 'discounts/:id/view', component: () => import('./views/DiscountFormView.vue') },
+  { path: 'gasoline/create', component: () => import('./views/GasolineFormView.vue') },
+  { path: 'gasoline/:id/edit', component: () => import('./views/GasolineFormView.vue') },
+  { path: 'gasoline/:id/view', component: () => import('./views/GasolineFormView.vue') },
 ]
 
 export default {
