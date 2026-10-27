@@ -54,6 +54,31 @@ function vehicleName(b) {
 function navigate(id, action) {
   router.push(`/rent/contracts/rental/${id}/${action}`)
 }
+const invoiceLoading = ref(null)
+async function openInvoice(id) {
+  if (invoiceLoading.value !== null) return
+  invoiceLoading.value = id
+  const tab = window.open('', '_blank')
+  if (tab)
+    tab.document.write(
+      '<p style="font-family:sans-serif;padding:20px">Generating invoice PDF...</p>',
+    )
+  try {
+    const response = await api.get(`/rent/rental-contracts/${id}/invoice/pdf`, {
+      responseType: 'blob',
+      headers: { Accept: 'application/pdf' },
+    })
+    const url = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+    if (tab) tab.location.replace(url)
+    else window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 120000)
+  } catch (e) {
+    if (tab) tab.close()
+    error.value = t('Invoice PDF could not be generated.', 'تعذر إنشاء فاتورة PDF.')
+  } finally {
+    invoiceLoading.value = null
+  }
+}
 function goPreviousPage() {
   if (page.value <= 1 || loading.value) return
   page.value -= 1
@@ -124,7 +149,7 @@ function goNextPage() {
                   </svg>
                   {{ t('Details', 'التفاصيل') }}
                 </button>
-                <button @click="navigate(c.id, 'invoice')">
+                <button @click="openInvoice(c.id)" :disabled="invoiceLoading !== null">
                   <svg
                     class="action-icon"
                     viewBox="0 0 24 24"
