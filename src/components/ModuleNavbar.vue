@@ -330,6 +330,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .nav {
+  /* Keep the header layout identical in Arabic and English. */
+  direction: ltr;
   position: relative;
   z-index: 1000;
   background: #fff;
@@ -468,12 +470,19 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
-/* In Arabic the profile/products controls are at the left edge.
-   Anchor their menus to that edge so nothing clips outside the viewport. */
-:global(html[dir='rtl']) .dropdown.profile,
-:global(html[dir='rtl']) .dropdown.products {
-  left: 0;
-  right: auto;
+/* Arabic changes text reading direction, not the navbar's position/order. */
+:global(html[dir='rtl']) .dropdown {
+  direction: rtl;
+  text-align: right;
+}
+:global(html[dir='rtl']) .dropdown.profile {
+  text-align: center;
+}
+:global(html[dir='rtl']) .nav-link {
+  unicode-bidi: plaintext;
+}
+:global(html[dir='rtl']) .sheet {
+  direction: rtl;
 }
 
 /* Long names must fit the menu instead of extending beyond the screen. */
