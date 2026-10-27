@@ -57,6 +57,7 @@ const form = reactive({
 })
 const details = reactive({
   nationality: '',
+  id_number: '',
   place_of_birth: '',
   date_of_birth: '',
   passport_place_of_issue: '',
@@ -121,10 +122,14 @@ const toggles = computed(() => [
 const maxBirth = new Date(Date.now() - 86400000).toISOString().slice(0, 10) // backend: before today
 const nationalityFields = [
   {
+    key: 'id_number',
+    label: 'ID Number',
+    placeholder: 'Enter ID number',
+  },
+  {
     key: 'passport_place_of_issue',
     label: 'Passport Place of Issue',
     placeholder: 'Enter passport place of issue',
-    full: true,
   },
   { key: 'passport_date_of_issue', label: 'Passport Date of Issue', type: 'date' },
   {
