@@ -55,6 +55,7 @@ function navigate(id, action) {
   router.push(`/rent/contracts/rental/${id}/${action}`)
 }
 const invoiceLoading = ref(null)
+const detailsLoading = ref(null)
 async function openInvoice(id) {
   if (invoiceLoading.value !== null) return
   invoiceLoading.value = id
@@ -77,6 +78,30 @@ async function openInvoice(id) {
     error.value = t('Invoice PDF could not be generated.', 'تعذر إنشاء فاتورة PDF.')
   } finally {
     invoiceLoading.value = null
+  }
+}
+async function openDetailsPdf(id) {
+  if (detailsLoading.value !== null) return
+  detailsLoading.value = id
+  const tab = window.open('', '_blank')
+  if (tab)
+    tab.document.write(
+      '<p style="font-family:sans-serif;padding:20px">Generating contract PDF...</p>',
+    )
+  try {
+    const response = await api.get(`/rent/rental-contracts/${id}/details/pdf`, {
+      responseType: 'blob',
+      headers: { Accept: 'application/pdf' },
+    })
+    const url = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+    if (tab) tab.location.replace(url)
+    else window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 120000)
+  } catch (e) {
+    if (tab) tab.close()
+    error.value = t('Contract PDF could not be generated.', 'تعذر إنشاء PDF العقد.')
+  } finally {
+    detailsLoading.value = null
   }
 }
 function goPreviousPage() {
@@ -136,7 +161,7 @@ function goNextPage() {
             <td>{{ vehicleName(c.booking) }}</td>
             <td>
               <div class="actions">
-                <button @click="navigate(c.id, 'view')">
+                <button @click="openDetailsPdf(c.id)" :disabled="detailsLoading !== null">
                   <svg
                     class="action-icon"
                     viewBox="0 0 24 24"
