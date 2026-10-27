@@ -1,416 +1,47 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
+import {ref,computed,watch,onMounted} from 'vue'
+import {useRoute,useRouter} from 'vue-router'
+import {useI18n} from 'vue-i18n'
 import api from '@/api'
-const route = useRoute(),
-  router = useRouter(),
-  { locale } = useI18n()
-const tr = (en, ar) => (locale.value === 'ar' ? ar : en)
-const id = computed(() => route.params.id),
-  view = computed(() => route.path.endsWith('/view')),
-  editing = computed(() => !!id.value),
-  readonly = computed(() => view.value)
-const services = ref([]),
-  cars = ref([]),
-  carQuery = ref(''),
-  dropdown = ref(false),
-  busy = ref(false),
-  loading = ref(!!id.value),
-  error = ref(''),
-  resolution = ref(null),
-  image = ref(null),
-  imageUrl = ref('')
-const f = ref({
-  car_id: '',
-  date: '',
-  time: '',
-  service_ids: [],
-  manual_customer_name: '',
-  is_responsible: null,
-  croka_number: '',
-  note: '',
-})
-const includeImage = ref(false)
-function toggleService(serviceId, checked) {
-  const id = Number(serviceId)
-  if (checked && !f.value.service_ids.includes(id)) f.value.service_ids.push(id)
-  else if (!checked) f.value.service_ids = f.value.service_ids.filter((x) => x !== id)
-}
-const selectedServices = computed(() =>
-  services.value.filter((s) => f.value.service_ids.includes(Number(s.id))),
-)
-const total = computed(() =>
-  selectedServices.value.reduce((sum, s) => sum + Number(s.price || 0), 0).toFixed(2),
-)
-const hasLawsuit = computed(() => selectedServices.value.some((s) => s.has_lawsuit))
-const customer = computed(() => resolution.value?.customer_name || '')
-const hasCustomer = computed(() => !!resolution.value?.matched)
-let timer
-watch(carQuery, () => {
-  clearTimeout(timer)
-  timer = setTimeout(loadCars, 250)
-})
-async function loadCars() {
-  try {
-    const { data } = await api.get('/rent/extra-money/vehicles', {
-      params: { search: carQuery.value, include_id: f.value.car_id || undefined },
-    })
-    cars.value = data.data || []
-  } catch (e) {
-    error.value = e.response?.data?.message || 'Cannot load vehicles'
-  }
-}
-function selectCar(c) {
-  f.value.car_id = c.id
-  carQuery.value = c.label
-  dropdown.value = false
-  resolveCustomer()
-}
-async function resolveCustomer() {
-  if (!f.value.car_id || !f.value.date || !f.value.time) return
-  try {
-    const { data } = await api.get('/rent/extra-money/resolve', {
-      params: { car_id: f.value.car_id, date: f.value.date, time: f.value.time },
-    })
-    resolution.value = data.data
-    if (resolution.value?.matched) f.value.manual_customer_name = ''
-  } catch (e) {
-    error.value = e.response?.data?.message || 'Lookup failed'
-  }
-}
-watch(() => [f.value.car_id, f.value.date, f.value.time], resolveCustomer)
-async function load() {
-  loading.value = true
-  try {
-    const { data } = await api.get(`/rent/extra-money/${id.value}`)
-    const r = data.data
-    f.value = {
-      car_id: r.car_id,
-      date: r.date,
-      time: r.time,
-      service_ids: r.service_ids.map(Number),
-      manual_customer_name: r.manual_customer_name || '',
-      is_responsible: r.is_responsible,
-      croka_number: r.croka_number || '',
-      note: r.note || '',
-    }
-    carQuery.value = r.car_number || ''
-    resolution.value = {
-      matched: !!r.contract_id,
-      customer_name: r.customer_name,
-      contract_id: r.contract_id,
-    }
-    if (r.has_image) {
-      includeImage.value = true
-      await loadImage()
-    }
-  } catch (e) {
-    error.value = e.response?.data?.message || 'Failed to load'
-  } finally {
-    loading.value = false
-  }
-}
-async function loadImage() {
-  try {
-    const r = await api.get(`/rent/extra-money/${id.value}/image`, { responseType: 'blob' })
-    imageUrl.value = URL.createObjectURL(r.data)
-  } catch {
-    imageUrl.value = ''
-  }
-}
-function chooseImage(event) {
-  image.value = event.target.files?.[0] || null
-}
-async function save() {
-  error.value = ''
-  busy.value = true
-  try {
-    const fd = new FormData()
-    for (const key of ['car_id', 'date', 'time', 'note', 'manual_customer_name'])
-      fd.append(key, f.value[key] ?? '')
-    f.value.service_ids.forEach((v) => fd.append('service_ids[]', v))
-    if (hasLawsuit.value) {
-      fd.append('is_responsible', f.value.is_responsible === true ? '1' : '0')
-      fd.append('croka_number', f.value.croka_number)
-    }
-    if (image.value) fd.append('image', image.value)
-    if (editing.value) {
-      fd.append('_method', 'PUT')
-      await api.post(`/rent/extra-money/${id.value}`, fd)
-    } else await api.post('/rent/extra-money', fd)
-    router.push('/rent/extra-money')
-  } catch (e) {
-    const errors = e.response?.data?.errors
-    error.value = errors
-      ? Object.values(errors).flat().join(' ')
-      : e.response?.data?.message || 'Save failed'
-  } finally {
-    busy.value = false
-  }
-}
-function back() {
-  router.push('/rent/extra-money')
-}
-onMounted(async () => {
-  try {
-    services.value = (await api.get('/rent/extra-money-services')).data.data || []
-  } catch (e) {
-    error.value = e.response?.data?.message || 'Cannot load services'
-  }
-  await loadCars()
-  if (id.value) await load()
-})
+const route=useRoute(),router=useRouter(),{locale}=useI18n()
+const tr=(en,ar)=>locale.value==='ar'?ar:en
+const id=computed(()=>route.params.id),view=computed(()=>route.path.endsWith('/view')),editing=computed(()=>!!id.value),readonly=computed(()=>view.value)
+const services=ref([]),cars=ref([]),carQuery=ref(''),dropdown=ref(false),busy=ref(false),loading=ref(!!id.value),error=ref(''),resolution=ref(null),image=ref(null),imageUrl=ref('')
+const f=ref({car_id:'',date:'',time:'',service_ids:[],manual_customer_name:'',has_croka:false,is_responsible:null,croka_number:'',croka_amount:'',note:''})
+const includeImage=ref(false)
+function toggleService(serviceId,checked){const id=Number(serviceId);if(checked&&!f.value.service_ids.includes(id))f.value.service_ids.push(id);else if(!checked)f.value.service_ids=f.value.service_ids.filter(x=>x!==id)}
+const selectedServices=computed(()=>services.value.filter(s=>f.value.service_ids.includes(Number(s.id))))
+const total=computed(()=>(selectedServices.value.reduce((sum,s)=>sum+Number(s.price||0),0)+(f.value.has_croka?Number(f.value.croka_amount||0):0)).toFixed(2))
+const customer=computed(()=>resolution.value?.customer_name||'')
+const hasCustomer=computed(()=>!!resolution.value?.matched)
+let timer;watch(carQuery,()=>{clearTimeout(timer);timer=setTimeout(loadCars,250)})
+async function loadCars(){try{const {data}=await api.get('/rent/extra-money/vehicles',{params:{search:carQuery.value,include_id:f.value.car_id||undefined}});cars.value=data.data||[]}catch(e){error.value=e.response?.data?.message||'Cannot load vehicles'}}
+function selectCar(c){f.value.car_id=c.id;carQuery.value=c.label;dropdown.value=false;resolveCustomer()}
+async function resolveCustomer(){if(!f.value.car_id||!f.value.date||!f.value.time)return;try{const {data}=await api.get('/rent/extra-money/resolve',{params:{car_id:f.value.car_id,date:f.value.date,time:f.value.time}});resolution.value=data.data;if(resolution.value?.matched)f.value.manual_customer_name=''}catch(e){error.value=e.response?.data?.message||'Lookup failed'}}
+watch(()=>[f.value.car_id,f.value.date,f.value.time],resolveCustomer)
+async function load(){loading.value=true;try{const {data}=await api.get(`/rent/extra-money/${id.value}`);const r=data.data;f.value={car_id:r.car_id,date:r.date,time:r.time,service_ids:r.service_ids.map(Number),manual_customer_name:r.manual_customer_name||'',has_croka:!!r.has_croka,is_responsible:r.is_responsible,croka_number:r.croka_number||'',croka_amount:r.croka_amount??'',note:r.note||''};carQuery.value=r.car_number||'';resolution.value={matched:!!r.contract_id,customer_name:r.customer_name,contract_id:r.contract_id};if(r.has_image){includeImage.value=true;await loadImage()}}catch(e){error.value=e.response?.data?.message||'Failed to load'}finally{loading.value=false}}
+async function loadImage(){try{const r=await api.get(`/rent/extra-money/${id.value}/image`,{responseType:'blob'});imageUrl.value=URL.createObjectURL(r.data)}catch{imageUrl.value=''}}
+function chooseImage(event){image.value=event.target.files?.[0]||null}
+async function save(){error.value='';busy.value=true;try{const fd=new FormData();for(const key of ['car_id','date','time','note','manual_customer_name'])fd.append(key,f.value[key]??'');f.value.service_ids.forEach(v=>fd.append('service_ids[]',v));fd.append('has_croka',f.value.has_croka?'1':'0');if(f.value.has_croka){if(f.value.is_responsible!==null)fd.append('is_responsible',f.value.is_responsible===true?'1':'0');fd.append('croka_number',f.value.croka_number);fd.append('croka_amount',f.value.croka_amount??'')}if(image.value)fd.append('image',image.value);if(editing.value){fd.append('_method','PUT');await api.post(`/rent/extra-money/${id.value}`,fd)}else await api.post('/rent/extra-money',fd);router.push('/rent/extra-money')}catch(e){const errors=e.response?.data?.errors;error.value=errors?Object.values(errors).flat().join(' '):e.response?.data?.message||'Save failed'}finally{busy.value=false}}
+function back(){router.push('/rent/extra-money')}
+onMounted(async()=>{try{services.value=(await api.get('/rent/extra-money-services')).data.data||[]}catch(e){error.value=e.response?.data?.message||'Cannot load services'}await loadCars();if(id.value)await load()})
 </script>
 <template>
-  <section class="emf-page">
-    <header>
-      <h2>
-        {{
-          view
-            ? tr('View Extra Money', 'عرض مبلغ إضافي')
-            : editing
-              ? tr('Edit Extra Money', 'تعديل مبلغ إضافي')
-              : tr('Add Extra Money', 'إضافة مبلغ إضافي')
-        }}
-      </h2>
-      <div>
-        <button type="button" class="back" @click="back">{{ tr('Back', 'عودة') }}</button
-        ><button
-          v-if="!readonly"
-          type="button"
-          class="save"
-          :disabled="busy || loading"
-          @click="save"
-        >
-          {{ editing ? tr('Save Changes', 'حفظ التعديلات') : tr('Add Extra Money', 'إضافة مبلغ') }}
-        </button>
-      </div>
-    </header>
-    <p v-if="error" class="error">{{ error }}</p>
-    <div v-if="loading" class="card">{{ tr('Loading...', 'جار التحميل...') }}</div>
-    <form v-else class="card" @submit.prevent="save">
-      <div class="fields">
-        <label class="full"
-          >{{ tr('Plate No.', 'رقم المركبة') }} *
-          <div class="car-lookup">
-            <input
-              v-model="carQuery"
-              :disabled="readonly"
-              :placeholder="tr('Search vehicle number', 'ابحث عن رقم المركبة')"
-              @focus="dropdown = true"
-            />
-            <div v-if="dropdown && !readonly" class="car-list">
-              <button type="button" v-for="c in cars" :key="c.id" @click="selectCar(c)">
-                {{ c.label }}</button
-              ><span v-if="!cars.length">{{ tr('No vehicles', 'لا توجد مركبات') }}</span>
-            </div>
-          </div></label
-        >
-        <div class="full services">
-          <label v-for="s in services" :key="s.id" class="service"
-            ><input
-              type="checkbox"
-              :disabled="readonly"
-              :checked="f.service_ids.includes(Number(s.id))"
-              @change="toggleService(s.id, $event.target.checked)"
-            />{{ s.name }} <small>{{ s.price }}</small></label
-          >
-        </div>
-        <div class="full">
-          <label class="service"
-            ><input type="checkbox" v-model="includeImage" :disabled="readonly" />{{
-              tr('Images', 'صور')
-            }}</label
-          >
-        </div>
-        <div class="full" v-if="includeImage && !readonly">
-          <label
-            >{{ tr('Image (optional)', 'صورة (اختياري)')
-            }}<input type="file" accept="image/jpeg,image/png,image/webp" @change="chooseImage"
-          /></label>
-        </div>
-        <div v-if="imageUrl" class="full">
-          <img :src="imageUrl" alt="Extra Money image" class="preview" />
-        </div>
-        <div v-if="hasLawsuit" class="full law">
-          <label
-            >{{ tr('Responsible for accident?', 'هل هو مسؤول عن الحادث؟') }} *<select
-              v-model="f.is_responsible"
-              :disabled="readonly"
-            >
-              <option :value="null">—</option>
-              <option :value="true">{{ tr('Yes', 'نعم') }}</option>
-              <option :value="false">{{ tr('No', 'لا') }}</option>
-            </select></label
-          ><label
-            >{{ tr('Croka Number', 'رقم الكروكا') }} *<input
-              v-model="f.croka_number"
-              :disabled="readonly"
-          /></label>
-        </div>
-        <label class="full"
-          >{{ tr('Total Price', 'السعر الإجمالي') }}<input :value="total" disabled
-        /></label>
-        <label
-          >{{ tr('Date', 'التاريخ') }} *<input
-            v-model="f.date"
-            type="date"
-            :disabled="readonly"
-            required /></label
-        ><label
-          >{{ tr('Time', 'الوقت') }} *<input
-            v-model="f.time"
-            type="time"
-            :disabled="readonly"
-            required
-        /></label>
-        <label class="full"
-          >{{ tr('Customer / Driver', 'العميل / السائق')
-          }}<input v-if="hasCustomer" :value="customer" disabled /><input
-            v-else
-            v-model="f.manual_customer_name"
-            :disabled="readonly"
-            :placeholder="tr('Enter customer name', 'أدخل اسم العميل')"
-        /></label>
-        <label class="full"
-          >{{ tr('Note', 'ملاحظات') }}<textarea v-model="f.note" :disabled="readonly" rows="3" />
-        </label>
-      </div>
-    </form>
-  </section>
+<section class="emf-page"><header><h2>{{view?tr('View Extra Money','عرض مبلغ إضافي'):editing?tr('Edit Extra Money','تعديل مبلغ إضافي'):tr('Add Extra Money','إضافة مبلغ إضافي')}}</h2><div><button type="button" class="back" @click="back">{{tr('Back','عودة')}}</button><button v-if="!readonly" type="button" class="save" :disabled="busy||loading" @click="save">{{editing?tr('Save Changes','حفظ التعديلات'):tr('Add Extra Money','إضافة مبلغ')}}</button></div></header>
+<p v-if="error" class="error">{{error}}</p><div v-if="loading" class="card">{{tr('Loading...','جار التحميل...')}}</div>
+<form v-else class="card" @submit.prevent="save"><div class="fields">
+ <label class="full">{{tr('Plate No.','رقم المركبة')}} *<div class="car-lookup"><input v-model="carQuery" :disabled="readonly" :placeholder="tr('Search vehicle number','ابحث عن رقم المركبة')" @focus="dropdown=true"/><div v-if="dropdown&&!readonly" class="car-list"><button type="button" v-for="c in cars" :key="c.id" @click="selectCar(c)">{{c.label}}</button><span v-if="!cars.length">{{tr('No vehicles','لا توجد مركبات')}}</span></div></div></label>
+ <div class="full services"><label v-for="s in services" :key="s.id" class="service"><input type="checkbox" :disabled="readonly" :checked="f.service_ids.includes(Number(s.id))" @change="toggleService(s.id,$event.target.checked)"/>{{s.name}} <small>{{s.price}}</small></label></div>
+ <div class="full"><label class="service"><input type="checkbox" v-model="f.has_croka" :disabled="readonly"/>{{tr('Croka','كروكا')}}</label></div>
+ <div class="full"><label class="service"><input type="checkbox" v-model="includeImage" :disabled="readonly"/>{{tr('Images','صور')}}</label></div>
+ <div class="full" v-if="includeImage&&!readonly"><label>{{tr('Image (optional)','صورة (اختياري)')}}<input type="file" accept="image/jpeg,image/png,image/webp" @change="chooseImage"/></label></div><div v-if="imageUrl" class="full"><img :src="imageUrl" alt="Extra Money image" class="preview"/></div>
+ <div v-if="f.has_croka" class="full law"><label>{{tr('Responsible for accident?','هل هو مسؤول عن الحادث؟')}} *<select v-model="f.is_responsible" :disabled="readonly"><option :value="null">—</option><option :value="true">{{tr('Yes','نعم')}}</option><option :value="false">{{tr('No','لا')}}</option></select></label><label>{{tr('Croka Number','رقم الكروكا')}} *<input v-model="f.croka_number" :disabled="readonly"/></label><label>{{tr('Croka Amount','قيمة الكروكا')}} *<input v-model.number="f.croka_amount" type="number" min="0" step="0.01" :disabled="readonly"/></label></div>
+ <label class="full">{{tr('Total Price','السعر الإجمالي')}}<input :value="total" disabled/></label>
+ <label>{{tr('Date','التاريخ')}} *<input v-model="f.date" type="date" :disabled="readonly" required/></label><label>{{tr('Time','الوقت')}} *<input v-model="f.time" type="time" :disabled="readonly" required/></label>
+ <label class="full">{{tr('Customer / Driver','العميل / السائق')}}<input v-if="hasCustomer" :value="customer" disabled/><input v-else v-model="f.manual_customer_name" :disabled="readonly" :placeholder="tr('Enter customer name','أدخل اسم العميل')"/></label>
+ <label class="full">{{tr('Note','ملاحظات')}}<textarea v-model="f.note" :disabled="readonly" rows="3"/></label>
+ </div></form></section>
 </template>
 <style scoped>
-.emf-page {
-  padding: 20px;
-  color: #0b2346;
-}
-.emf-page header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 28px;
-}
-.emf-page header h2 {
-  font-size: 24px;
-}
-.emf-page header div {
-  display: flex;
-  gap: 10px;
-}
-.back,
-.save {
-  border: 1px solid #d3deea;
-  border-radius: 23px;
-  padding: 9px 18px;
-  background: white;
-  cursor: pointer;
-}
-.save {
-  background: #609dc3;
-  border: 0;
-  color: white;
-}
-.card {
-  border: 1px solid #d3deea;
-  border-radius: 14px;
-  padding: 30px;
-  background: white;
-}
-.fields {
-  max-width: 780px;
-  margin: auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px 20px;
-}
-.fields label {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.fields input:not([type='checkbox']),
-.fields textarea,
-.fields select {
-  border: 1px solid #cdd8e4;
-  border-radius: 9px;
-  padding: 10px 13px;
-  width: 100%;
-  min-height: 39px;
-  box-sizing: border-box;
-  background: white;
-  color: #142c4a;
-}
-.fields input:disabled,
-.fields textarea:disabled {
-  background: #f5f8fb;
-}
-.full {
-  grid-column: 1/-1;
-}
-.services {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 13px;
-}
-.fields .service {
-  font-weight: 400;
-  flex-direction: row;
-  align-items: center;
-}
-.service small {
-  color: #778aa7;
-}
-.law {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-}
-.preview {
-  max-width: 300px;
-  max-height: 180px;
-  object-fit: contain;
-}
-.car-lookup {
-  position: relative;
-}
-.car-list {
-  position: absolute;
-  top: 100%;
-  width: 100%;
-  max-height: 230px;
-  overflow: auto;
-  background: white;
-  border: 1px solid #dae1ec;
-  box-shadow: 0 5px 20px #0002;
-  z-index: 2;
-}
-.car-list button {
-  display: block;
-  text-align: start;
-  background: white;
-  border: 0;
-  padding: 12px;
-  width: 100%;
-  cursor: pointer;
-}
-.car-list button:hover {
-  background: #edf5fa;
-}
-.error {
-  color: #dc2626;
-  padding: 12px;
-  background: #fff3f3;
-}
-@media (max-width: 650px) {
-  .fields {
-    grid-template-columns: 1fr;
-  }
-  .law {
-    grid-template-columns: 1fr;
-  }
-}
+.emf-page{padding:20px;color:#0b2346}.emf-page header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:28px}.emf-page header h2{font-size:24px}.emf-page header div{display:flex;gap:10px}.back,.save{border:1px solid #d3deea;border-radius:23px;padding:9px 18px;background:white;cursor:pointer}.save{background:#609dc3;border:0;color:white}.card{border:1px solid #d3deea;border-radius:14px;padding:30px;background:white}.fields{max-width:780px;margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:18px 20px}.fields label{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:600}.fields input:not([type=checkbox]),.fields textarea,.fields select{border:1px solid #cdd8e4;border-radius:9px;padding:10px 13px;width:100%;min-height:39px;box-sizing:border-box;background:white;color:#142c4a}.fields input:disabled,.fields textarea:disabled{background:#f5f8fb}.full{grid-column:1/-1}.services{display:flex;flex-wrap:wrap;gap:13px}.fields .service{font-weight:400;flex-direction:row;align-items:center}.service small{color:#778aa7}.law{display:grid;grid-template-columns:1fr 1fr;gap:15px}.preview{max-width:300px;max-height:180px;object-fit:contain}.car-lookup{position:relative}.car-list{position:absolute;top:100%;width:100%;max-height:230px;overflow:auto;background:white;border:1px solid #dae1ec;box-shadow:0 5px 20px #0002;z-index:2}.car-list button{display:block;text-align:start;background:white;border:0;padding:12px;width:100%;cursor:pointer}.car-list button:hover{background:#edf5fa}.error{color:#dc2626;padding:12px;background:#fff3f3}@media(max-width:650px){.fields{grid-template-columns:1fr}.law{grid-template-columns:1fr}}
 </style>

@@ -18,7 +18,7 @@ const tab = ref('money'),
   error = ref(''),
   deleting = ref(false),
   target = ref(null)
-const serviceForm = ref({ id: null, name: '', price: 0, has_lawsuit: false }),
+const serviceForm = ref({ id: null, name: '', price: 0 }),
   serviceEditing = ref(false)
 const go = (path) => router.push(path)
 async function load() {
@@ -51,16 +51,11 @@ function changeTab(t) {
   else load()
 }
 function editService(s) {
-  serviceForm.value = {
-    id: s.id,
-    name: s.name,
-    price: Number(s.price),
-    has_lawsuit: !!s.has_lawsuit,
-  }
+  serviceForm.value = { id: s.id, name: s.name, price: Number(s.price) }
   serviceEditing.value = true
 }
 function resetService() {
-  serviceForm.value = { id: null, name: '', price: 0, has_lawsuit: false }
+  serviceForm.value = { id: null, name: '', price: 0 }
   serviceEditing.value = false
 }
 async function saveService() {
@@ -211,9 +206,6 @@ onMounted(load)
               step="0.01"
               min="0"
               required /></label
-          ><label class="check"
-            ><input v-model="serviceForm.has_lawsuit" type="checkbox" />
-            {{ tr('Requires lawsuit', 'تتطلب قضية') }}</label
           ><button class="primary" type="submit">{{ tr('Save', 'حفظ') }}</button
           ><button v-if="serviceEditing" type="button" @click="resetService">
             {{ tr('Cancel', 'إلغاء') }}
@@ -226,7 +218,6 @@ onMounted(load)
                 <th>ID</th>
                 <th>{{ tr('Name', 'الاسم') }}</th>
                 <th>{{ tr('Price', 'السعر') }}</th>
-                <th>{{ tr('Requires Lawsuit', 'تتطلب قضية') }}</th>
                 <th>{{ tr('Actions', 'الإجراءات') }}</th>
               </tr>
             </thead>
@@ -235,7 +226,6 @@ onMounted(load)
                 <td>{{ s.id }}</td>
                 <td>{{ s.name }}</td>
                 <td>{{ s.price }}</td>
-                <td>{{ s.has_lawsuit ? tr('Yes', 'نعم') : tr('No', 'لا') }}</td>
                 <td class="actions">
                   <button @click="editService(s)">✎ {{ tr('Edit', 'تعديل') }}</button
                   ><button class="danger" @click="target = { kind: 'service', id: s.id }">
