@@ -1,4 +1,5 @@
 <script setup>
+import StandardTablePager from '@/modules/rent/components/StandardTablePager.vue'
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -15,7 +16,7 @@ const meta = {
 const name = computed(() => meta[props.kind] || meta.refunds)
 const rows = ref([]),
   search = ref(''),
-  perPage = ref(15),
+  perPage = ref(50),
   page = ref(1),
   lastPage = ref(1),
   total = ref(0),
@@ -95,6 +96,12 @@ watch(perPage, () => {
   load()
 })
 onMounted(load)
+
+function uiTableGoToPage(n) {
+  if (n < 1 || n > Number(lastPage) || n === page.value) return
+  page.value = n
+  load()
+}
 </script>
 <template>
   <section class="wrap" :dir="locale === 'ar' ? 'rtl' : 'ltr'">
@@ -105,7 +112,7 @@ onMounted(load)
       </button>
     </div>
     <div class="card">
-      <div class="toolbar">
+      <div class="toolbar ui-table-toolbar">
         <input v-model="search" :placeholder="t('Search', 'بحث')" /><select
           v-model.number="perPage"
         >
@@ -116,7 +123,7 @@ onMounted(load)
       </div>
       <div v-if="error" class="error">{{ error }}</div>
       <div class="scroll">
-        <table>
+        <table class="ui-standardized-table">
           <thead>
             <tr>
               <th>ID</th>
@@ -174,7 +181,7 @@ onMounted(load)
           </tbody>
         </table>
       </div>
-      <footer>
+      <footer class="ui-legacy-pager">
         <span>{{ total }} {{ t('records', 'سجل') }}</span>
         <div>
           <button :disabled="page <= 1" @click="prev">{{ t('Previous', 'السابق') }}</button>
@@ -182,6 +189,7 @@ onMounted(load)
           <button :disabled="page >= lastPage" @click="next">{{ t('Next', 'التالي') }}</button>
         </div>
       </footer>
+<StandardTablePager :page="page" :last-page="lastPage" :disabled="loading" @change="uiTableGoToPage" />
     </div>
     <div v-if="del !== null" class="backdrop" @click.self="del = null">
       <div class="modal">
@@ -314,4 +322,35 @@ footer button {
   color: white;
   border: 0;
 }
+
+/* Shared table presentation: physical left/search, middle/page size, right/action in both languages. */
+.ui-table-toolbar{direction:ltr!important;display:grid!important;grid-template-columns:minmax(160px,1fr) auto minmax(160px,1fr)!important;align-items:center!important;column-gap:16px!important;row-gap:10px!important;justify-content:stretch!important;width:100%!important;margin-bottom:16px!important}
+.ui-table-toolbar > input:first-child,.ui-table-toolbar > .search:first-child,.ui-table-toolbar > .search-box:first-child{grid-column:1;grid-row:1;justify-self:start!important;min-width:0;max-width:360px;width:100%}
+.ui-table-toolbar > select,.ui-table-toolbar > .per-page,.ui-table-toolbar > .toolbar-right{grid-column:2;grid-row:1;justify-self:center!important;margin-inline:auto!important}
+.ui-table-toolbar > .toolbar-right{display:flex;align-items:center;gap:12px}
+.ui-table-toolbar > .toolbar-right .per-page{margin:auto}
+.ui-table-toolbar > .toolbar-right .count{font-size:12px;color:#68788b}
+.ui-table-toolbar > .filters{display:contents}
+.ui-table-toolbar > .filters > input:first-child{grid-column:1;grid-row:1;justify-self:start!important;max-width:360px;width:100%}
+.ui-table-toolbar > .filters > select{grid-column:2;grid-row:1;justify-self:center!important}
+.ui-table-toolbar > .toolbar-right > button,.ui-table-toolbar > button.primary,.ui-table-toolbar > .primary,.ui-table-toolbar > .btn-new{grid-column:3;grid-row:1;justify-self:end!important}
+.ui-table-toolbar > select:not(:first-child){width:auto;min-width:105px}
+.ui-table-toolbar > input[type="search"],.ui-table-toolbar > input:not([type]),.ui-table-toolbar .search-box input{height:34px!important;min-height:34px!important;box-sizing:border-box}
+.ui-table-toolbar > select{height:34px!important;min-height:34px!important;box-sizing:border-box}
+.ui-table-toolbar > :not(input):not(select):not(.per-page):not(.toolbar-right):not(.search-box):not(.filters):not(button){justify-self:center}
+.ui-table-toolbar > input:only-child{grid-column:1}
+.ui-table-toolbar > input:nth-child(1){grid-column:1}
+.ui-table-toolbar > select:nth-child(2){grid-column:2}
+.ui-table-toolbar > select:nth-child(3){grid-column:2}
+.ui-table-toolbar > button:last-child{grid-column:3;justify-self:end}
+.ui-legacy-pager{display:none!important}
+/* Keep the physical toolbar arrangement LTR, but type Arabic search terms naturally. */
+:global(html[dir="rtl"]) .ui-table-toolbar input{direction:rtl}
+/* Center table values independent of dir=auto/ltr on individual cells. */
+.ui-standardized-table th,.ui-standardized-table td{text-align:center!important;vertical-align:middle!important}
+.ui-standardized-table td[dir],.ui-standardized-table th[dir]{text-align:center!important}
+.ui-standardized-table td .actions,.ui-standardized-table td .action-group,.ui-standardized-table td .row-actions{justify-content:center!important}
+.ui-standardized-table td input,.ui-standardized-table td textarea{text-align:inherit}
+@media(max-width:680px){.ui-table-toolbar{grid-template-columns:minmax(0,1fr) auto!important;gap:8px!important}.ui-table-toolbar > input:first-child,.ui-table-toolbar > .search-box:first-child{grid-column:1}.ui-table-toolbar > select,.ui-table-toolbar > .per-page,.ui-table-toolbar > .toolbar-right{grid-column:2}.ui-table-toolbar > button.primary,.ui-table-toolbar > .primary{grid-column:1/-1;grid-row:auto;justify-self:end}}
+
 </style>

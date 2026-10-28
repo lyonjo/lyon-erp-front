@@ -1,4 +1,5 @@
 <script setup>
+import StandardTablePager from '@/modules/rent/components/StandardTablePager.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
@@ -84,7 +85,7 @@ const rows = ref([])
 const loading = ref(false)
 const error = ref('')
 const search = ref('')
-const perPage = ref(15)
+const perPage = ref(50)
 const page = ref(1)
 const meta = ref({ current_page: 1, last_page: 1, total: 0 })
 let loadSeq = 0
@@ -192,6 +193,11 @@ async function remove(branch) {
     deletingId.value = null
   }
 }
+
+function uiTableGoToPage(n) {
+  if (n < 1 || n > Number(meta.last_page) || n === page.value) return
+  page.value = n
+}
 </script>
 
 <template>
@@ -201,7 +207,7 @@ async function remove(branch) {
       <button type="button" class="new-button" @click="showModal()">{{ tr('new') }}</button>
     </div>
 
-    <div class="filters">
+    <div class="filters ui-table-toolbar">
       <input
         v-model="search"
         type="search"
@@ -222,7 +228,7 @@ async function remove(branch) {
     </div>
 
     <div class="table-wrapper" :class="{ muted: loading }">
-      <table>
+      <table class="ui-standardized-table">
         <thead>
           <tr>
             <th>{{ tr('id') }}</th>
@@ -262,7 +268,7 @@ async function remove(branch) {
       </table>
     </div>
 
-    <div class="pagination" dir="ltr">
+    <div class="ui-legacy-pager pagination" dir="ltr">
       <button type="button" :disabled="loading || page <= 1" @click="page -= 1">
         {{ tr('prev') }}
       </button>
@@ -273,6 +279,12 @@ async function remove(branch) {
         {{ tr('next') }}
       </button>
     </div>
+    <StandardTablePager
+      :page="page"
+      :last-page="meta.last_page"
+      :disabled="loading"
+      @change="uiTableGoToPage"
+    />
 
     <div v-if="open" class="backdrop" @click.self="closeModal" @keydown.esc="closeModal">
       <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="branch-dialog-title">
@@ -627,6 +639,157 @@ tbody tr:last-child td {
   }
   .dialog {
     padding: 20px;
+  }
+}
+
+/* Shared table presentation: physical left/search, middle/page size, right/action in both languages. */
+.ui-table-toolbar {
+  direction: ltr !important;
+  display: grid !important;
+  grid-template-columns: minmax(160px, 1fr) auto minmax(160px, 1fr) !important;
+  align-items: center !important;
+  column-gap: 16px !important;
+  row-gap: 10px !important;
+  justify-content: stretch !important;
+  width: 100% !important;
+  margin-bottom: 16px !important;
+}
+.ui-table-toolbar > input:first-child,
+.ui-table-toolbar > .search:first-child,
+.ui-table-toolbar > .search-box:first-child {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start !important;
+  min-width: 0;
+  max-width: 360px;
+  width: 100%;
+}
+.ui-table-toolbar > select,
+.ui-table-toolbar > .per-page,
+.ui-table-toolbar > .toolbar-right {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center !important;
+  margin-inline: auto !important;
+}
+.ui-table-toolbar > .toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ui-table-toolbar > .toolbar-right .per-page {
+  margin: auto;
+}
+.ui-table-toolbar > .toolbar-right .count {
+  font-size: 12px;
+  color: #68788b;
+}
+.ui-table-toolbar > .filters {
+  display: contents;
+}
+.ui-table-toolbar > .filters > input:first-child {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start !important;
+  max-width: 360px;
+  width: 100%;
+}
+.ui-table-toolbar > .filters > select {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center !important;
+}
+.ui-table-toolbar > .toolbar-right > button,
+.ui-table-toolbar > button.primary,
+.ui-table-toolbar > .primary,
+.ui-table-toolbar > .btn-new {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end !important;
+}
+.ui-table-toolbar > select:not(:first-child) {
+  width: auto;
+  min-width: 105px;
+}
+.ui-table-toolbar > input[type='search'],
+.ui-table-toolbar > input:not([type]),
+.ui-table-toolbar .search-box input {
+  height: 34px !important;
+  min-height: 34px !important;
+  box-sizing: border-box;
+}
+.ui-table-toolbar > select {
+  height: 34px !important;
+  min-height: 34px !important;
+  box-sizing: border-box;
+}
+.ui-table-toolbar
+  > :not(input):not(select):not(.per-page):not(.toolbar-right):not(.search-box):not(.filters):not(
+    button
+  ) {
+  justify-self: center;
+}
+.ui-table-toolbar > input:only-child {
+  grid-column: 1;
+}
+.ui-table-toolbar > input:nth-child(1) {
+  grid-column: 1;
+}
+.ui-table-toolbar > select:nth-child(2) {
+  grid-column: 2;
+}
+.ui-table-toolbar > select:nth-child(3) {
+  grid-column: 2;
+}
+.ui-table-toolbar > button:last-child {
+  grid-column: 3;
+  justify-self: end;
+}
+.ui-legacy-pager {
+  display: none !important;
+}
+/* Keep the physical toolbar arrangement LTR, but type Arabic search terms naturally. */
+:global(html[dir='rtl']) .ui-table-toolbar input {
+  direction: rtl;
+}
+/* Center table values independent of dir=auto/ltr on individual cells. */
+.ui-standardized-table th,
+.ui-standardized-table td {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+.ui-standardized-table td[dir],
+.ui-standardized-table th[dir] {
+  text-align: center !important;
+}
+.ui-standardized-table td .actions,
+.ui-standardized-table td .action-group,
+.ui-standardized-table td .row-actions {
+  justify-content: center !important;
+}
+.ui-standardized-table td input,
+.ui-standardized-table td textarea {
+  text-align: inherit;
+}
+@media (max-width: 680px) {
+  .ui-table-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 8px !important;
+  }
+  .ui-table-toolbar > input:first-child,
+  .ui-table-toolbar > .search-box:first-child {
+    grid-column: 1;
+  }
+  .ui-table-toolbar > select,
+  .ui-table-toolbar > .per-page,
+  .ui-table-toolbar > .toolbar-right {
+    grid-column: 2;
+  }
+  .ui-table-toolbar > button.primary,
+  .ui-table-toolbar > .primary {
+    grid-column: 1/-1;
+    grid-row: auto;
+    justify-self: end;
   }
 }
 </style>
