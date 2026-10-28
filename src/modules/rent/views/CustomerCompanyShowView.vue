@@ -1,16 +1,475 @@
 <script setup>
-import { watch } from 'vue'
-import { useRouter,useRoute } from 'vue-router'
+import { watch, ref } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCustomerCompany } from '@/composables/useCustomerCompany'
-const { t, te }=useI18n();const tr=(k)=>te(`rentUi.${k}`)?t(`rentUi.${k}`):k
-const router=useRouter(),route=useRoute()
-const {company,loading,error,fetchCustomerCompany}=useCustomerCompany()
-watch(()=>route.params.id,id=>{if(id)fetchCustomerCompany(id)},{immediate:true})
+import api from '@/api'
+const { t, te } = useI18n()
+const tr = (k) => (te(`rentUi.${k}`) ? t(`rentUi.${k}`) : k)
+const router = useRouter(),
+  route = useRoute()
+const { company, loading, error, fetchCustomerCompany } = useCustomerCompany()
+const attachments = ref([])
+const attachmentsLoading = ref(false)
+const attachmentsError = ref('')
+const downloading = ref(null)
+const downloadError = ref('')
+async function loadAttachments(id) {
+  attachments.value = []
+  attachmentsError.value = ''
+  attachmentsLoading.value = true
+  try {
+    const response = await api.get(`/rent/customer-companies/${id}/attachments`)
+    const payload = response.data?.data ?? response.data
+    attachments.value = Array.isArray(payload) ? payload : (payload?.data ?? [])
+  } catch (error) {
+    attachmentsError.value = error.response?.data?.message || 'Could not load company attachments.'
+  } finally {
+    attachmentsLoading.value = false
+  }
+}
+async function downloadAttachment(attachment) {
+  if (downloading.value) return
+  downloading.value = attachment.id
+  downloadError.value = ''
+  try {
+    const response = await api.get(
+      `/rent/customer-companies/${route.params.id}/attachments/${attachment.id}/download`,
+      { responseType: 'blob' },
+    )
+    const url = URL.createObjectURL(response.data)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = attachment.original_name || 'attachment'
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  } catch (error) {
+    downloadError.value = error.response?.data?.message || 'Could not download attachment.'
+  } finally {
+    downloading.value = null
+  }
+}
+watch(
+  () => route.params.id,
+  (id) => {
+    if (id) {
+      fetchCustomerCompany(id)
+      loadAttachments(id)
+    }
+  },
+  { immediate: true },
+)
 </script>
-<template><div class="page"><div class="topbar"><button class="back" @click="router.push('/rent/customer-companies')">{{tr('Back')}}</button><button v-if="company" class="btn-edit" @click="router.push(`/rent/customer-companies/${route.params.id}/edit`)">{{tr('Edit')}}</button></div>
-<p v-if="loading" class="state">{{tr('Loading…')}}</p><div v-else-if="error" class="state">{{error}} <button @click="fetchCustomerCompany(route.params.id)">{{tr('Retry')}}</button></div>
-<div v-else-if="company" class="detail-card"><h1 dir="auto">{{company.name}}</h1><dl class="details"><div v-for="[label,value] in [['Email',company.email],['Phone',[company.country_code,company.phone].filter(Boolean).join(' ')],['Address',company.address],['Black List',tr(company.is_blacklist?'Yes':'No')],['Multi Contract',tr(company.is_multi_contract?'Yes':'No')]]" :key="label"><dt>{{tr(label)}}</dt><dd dir="auto">{{value||'—'}}</dd></div></dl></div></div></template>
+<template>
+  <div class="page">
+    <div class="topbar">
+      <button class="back" @click="router.push('/rent/customer-companies')">{{ tr('Back') }}</button
+      ><button
+        v-if="company"
+        class="btn-edit"
+        @click="router.push(`/rent/customer-companies/${route.params.id}/edit`)"
+      >
+        {{ tr('Edit') }}
+      </button>
+    </div>
+    <p v-if="loading" class="state">{{ tr('Loading…') }}</p>
+    <div v-else-if="error" class="state">
+      {{ error }} <button @click="fetchCustomerCompany(route.params.id)">{{ tr('Retry') }}</button>
+    </div>
+    <div v-else-if="company" class="detail-card">
+      <h1 dir="auto">{{ company.name }}</h1>
+      <dl class="details">
+        <div
+          v-for="[label, value] in [
+            ['Email', company.email],
+            ['Phone', [company.country_code, company.phone].filter(Boolean).join(' ')],
+            ['Address', company.address],
+            ['Black List', tr(company.is_blacklist ? 'Yes' : 'No')],
+            ['Multi Contract', tr(company.is_multi_contract ? 'Yes' : 'No')],
+          ]"
+          :key="label"
+        >
+          <dt>{{ tr(label) }}</dt>
+          <dd dir="auto">{{ value || '—' }}</dd>
+        </div>
+      </dl>
+      <section class="company-attachments">
+        <h2>
+          {{ tr('Company Attachments') }}
+          <span v-if="!attachmentsLoading && !attachmentsError">({{ attachments.length }})</span>
+        </h2>
+        <p v-if="attachmentsLoading" class="attachment-muted">{{ tr('Loading attachments…') }}</p>
+        <p v-else-if="attachmentsError" class="attachment-error">
+          {{ attachmentsError }}
+          <button type="button" @click="loadAttachments(route.params.id)">{{ tr('Retry') }}</button>
+        </p>
+        <p v-else-if="!attachments.length" class="attachment-muted">
+          {{ tr('No attachments uploaded.') }}
+        </p>
+        <ul v-else class="attachment-list">
+          <li v-for="attachment in attachments" :key="attachment.id">
+            <span class="attachment-name" dir="auto"
+              >{{ attachment.original_name || 'Attachment' }}
+              <small v-if="attachment.size"
+                >({{ (attachment.size / 1024 / 1024).toFixed(2) }} MB)</small
+              ></span
+            >
+            <button
+              class="download-btn"
+              type="button"
+              :disabled="downloading === attachment.id"
+              @click="downloadAttachment(attachment)"
+            >
+              {{ tr(downloading === attachment.id ? 'Downloading…' : 'Download') }}
+            </button>
+          </li>
+        </ul>
+        <p v-if="downloadError" class="attachment-error">{{ downloadError }}</p>
+      </section>
+    </div>
+  </div>
+</template>
 <style scoped>
-.page{padding:8px 4px 40px;color:#1f2937}.title{font-size:32px;font-weight:600;margin:0 0 28px;color:#1e2433}.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap}.search-box{position:relative;min-width:200px;width:300px}.search-box input{width:100%;height:36px;box-sizing:border-box;border:2px solid #9ca3af;border-radius:8px;padding:0 14px;background:#fff;font-size:14px}.selector{height:36px;padding:0 12px;border:2px solid #d1d5db;border-radius:8px;background:white;color:#6b7280}.per-page{margin-inline-start:auto}.btn-new,.btn-edit,.btn-save{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;background:#4f93b8;color:white;padding:9px 18px;cursor:pointer;font-size:14px}.btn-new:hover,.btn-edit:hover,.btn-save:hover{background:#3f83a8}.table-card{border:1px solid #e5e7eb;border-radius:14px;background:white;overflow-x:auto}.table-card.loading{opacity:.6}table{width:100%;min-width:700px;border-collapse:collapse}th,td{padding:14px 16px;text-align:center;font-size:14px;border-bottom:1px solid #eef0f3}th.left,td.left{text-align:start}th{color:#9ca3af;font-weight:500;font-size:13px}.badge{display:inline-block;min-width:36px;padding:3px 10px;border-radius:999px;font-size:12px}.good{color:#16a34a;background:#dcfce7}.bad{color:#dc2626;background:#fee2e2}.customer{background:#dbeafe;color:#2563eb}.company{background:#f3e8ff;color:#7e22ce}.actions{display:flex;gap:14px;justify-content:center}.action{border:0;background:transparent;color:#111827;cursor:pointer}.action:hover{color:#4f93b8}.empty{padding:32px;color:#6b7280;text-align:center}.pagination{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px}.pagination button{padding:8px 16px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer}.pagination button:disabled{opacity:.5;cursor:not-allowed}.api-error{padding:14px 18px;margin-bottom:16px;border-radius:8px;background:#fef2f2;color:#b91c1c;display:flex;gap:12px;align-items:center;justify-content:space-between}.api-error button{background:white;border:1px solid #dc2626;border-radius:6px;padding:7px 12px;color:#b91c1c;cursor:pointer}.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.back{border:0;background:none;color:#6b7280;cursor:pointer}.card{border:1px solid #e5e7eb;border-radius:16px;background:#fff;padding:28px 24px;max-width:600px;margin:0 auto}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px}.full{grid-column:1/-1}.field{display:flex;flex-direction:column;gap:6px}.field>span{font-size:13px;font-weight:600}.field input,.field select{height:38px;border:1px solid #d1d5db;border-radius:8px;padding:0 12px;font:inherit}.field small{color:#dc2626}.switch-card{grid-column:1/-1;border:1px solid #e5e7eb;border-radius:12px;padding:14px;background:#fafbfc;display:flex;justify-content:space-between;align-items:center;gap:12px}.switch-card p{font-size:12px;color:#6b7280}.state{padding:40px;text-align:center;color:#6b7280}.detail-card{border:1px solid #e5e7eb;border-radius:16px;padding:24px;background:#fff;max-width:600px;margin:auto}.details{display:grid;grid-template-columns:1fr 1fr;gap:18px}.details dt{font-size:12px;color:#9ca3af}.details dd{margin:4px 0 0;font-size:14px}.banner{padding:10px 14px;background:#fef2f2;color:#b91c1c;border-radius:8px;margin-bottom:20px}@media(max-width:640px){.grid,.details{grid-template-columns:1fr}.toolbar>*{flex:1}.per-page{margin-inline-start:0}}
+.page {
+  padding: 8px 4px 40px;
+  color: #1f2937;
+}
+.title {
+  font-size: 32px;
+  font-weight: 600;
+  margin: 0 0 28px;
+  color: #1e2433;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.search-box {
+  position: relative;
+  min-width: 200px;
+  width: 300px;
+}
+.search-box input {
+  width: 100%;
+  height: 36px;
+  box-sizing: border-box;
+  border: 2px solid #9ca3af;
+  border-radius: 8px;
+  padding: 0 14px;
+  background: #fff;
+  font-size: 14px;
+}
+.selector {
+  height: 36px;
+  padding: 0 12px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #6b7280;
+}
+.per-page {
+  margin-inline-start: auto;
+}
+.btn-new,
+.btn-edit,
+.btn-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: #4f93b8;
+  color: white;
+  padding: 9px 18px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.btn-new:hover,
+.btn-edit:hover,
+.btn-save:hover {
+  background: #3f83a8;
+}
+.table-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: white;
+  overflow-x: auto;
+}
+.table-card.loading {
+  opacity: 0.6;
+}
+table {
+  width: 100%;
+  min-width: 700px;
+  border-collapse: collapse;
+}
+th,
+td {
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 14px;
+  border-bottom: 1px solid #eef0f3;
+}
+th.left,
+td.left {
+  text-align: start;
+}
+th {
+  color: #9ca3af;
+  font-weight: 500;
+  font-size: 13px;
+}
+.badge {
+  display: inline-block;
+  min-width: 36px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.good {
+  color: #16a34a;
+  background: #dcfce7;
+}
+.bad {
+  color: #dc2626;
+  background: #fee2e2;
+}
+.customer {
+  background: #dbeafe;
+  color: #2563eb;
+}
+.company {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+.actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+.action {
+  border: 0;
+  background: transparent;
+  color: #111827;
+  cursor: pointer;
+}
+.action:hover {
+  color: #4f93b8;
+}
+.empty {
+  padding: 32px;
+  color: #6b7280;
+  text-align: center;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+}
+.pagination button {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+}
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.api-error {
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.api-error button {
+  background: white;
+  border: 1px solid #dc2626;
+  border-radius: 6px;
+  padding: 7px 12px;
+  color: #b91c1c;
+  cursor: pointer;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.back {
+  border: 0;
+  background: none;
+  color: #6b7280;
+  cursor: pointer;
+}
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+  padding: 28px 24px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 20px;
+}
+.full {
+  grid-column: 1/-1;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field > span {
+  font-size: 13px;
+  font-weight: 600;
+}
+.field input,
+.field select {
+  height: 38px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0 12px;
+  font: inherit;
+}
+.field small {
+  color: #dc2626;
+}
+.switch-card {
+  grid-column: 1/-1;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fafbfc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.switch-card p {
+  font-size: 12px;
+  color: #6b7280;
+}
+.state {
+  padding: 40px;
+  text-align: center;
+  color: #6b7280;
+}
+.detail-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  background: #fff;
+  max-width: 600px;
+  margin: auto;
+}
+.details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.details dt {
+  font-size: 12px;
+  color: #9ca3af;
+}
+.details dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+.banner {
+  padding: 10px 14px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+@media (max-width: 640px) {
+  .grid,
+  .details {
+    grid-template-columns: 1fr;
+  }
+  .toolbar > * {
+    flex: 1;
+  }
+  .per-page {
+    margin-inline-start: 0;
+  }
+}
+</style>
+<style scoped>
+.company-attachments {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e7eb;
+}
+.company-attachments h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+.attachment-muted {
+  color: #64748b;
+  font-size: 14px;
+}
+.attachment-error {
+  color: #b91c1c;
+  font-size: 14px;
+}
+.attachment-error button {
+  cursor: pointer;
+  margin-inline-start: 8px;
+}
+.attachment-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.attachment-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.attachment-name {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.attachment-name small {
+  color: #64748b;
+}
+.download-btn {
+  background: #4f93b8;
+  color: white;
+  border: 0;
+  border-radius: 6px;
+  padding: 7px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.download-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
 </style>

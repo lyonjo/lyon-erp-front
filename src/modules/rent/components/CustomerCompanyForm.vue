@@ -3,6 +3,7 @@ import { reactive, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CountrySearchSelect from './CountrySearchSelect.vue'
+import api from '@/api'
 import { dialingOptions } from '../constants/allCountries'
 const { t, te } = useI18n()
 const tr = (label) => (te(`rentUi.${label}`) ? t(`rentUi.${label}`) : label)
@@ -68,6 +69,31 @@ function addFiles(event) {
     attachments.value.push(file)
   }
   event.target.value = ''
+}
+const downloading = ref(null)
+const downloadError = ref('')
+async function downloadAttachment(attachment) {
+  if (!props.company?.id || downloading.value) return
+  downloading.value = attachment.id
+  downloadError.value = ''
+  try {
+    const response = await api.get(
+      `/rent/customer-companies/${props.company.id}/attachments/${attachment.id}/download`,
+      { responseType: 'blob' },
+    )
+    const url = URL.createObjectURL(response.data)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = attachment.original_name || attachment.name || 'attachment'
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  } catch (error) {
+    downloadError.value = error.response?.data?.message || tr('Could not download attachment.')
+  } finally {
+    downloading.value = null
+  }
 }
 function removePending(index) {
   attachments.value.splice(index, 1)
@@ -187,11 +213,26 @@ const back = () =>
             :key="attachment.id"
             class="attachment-entry"
           >
-            <span>{{ attachment.original_name || attachment.name }}</span
-            ><button type="button" @click="removeExisting(attachment.id)">
-              {{ tr('Remove') }}
-            </button>
+            <span
+              >{{ attachment.original_name || attachment.name }}
+              <small v-if="attachment.size"
+                >({{ (attachment.size / 1024 / 1024).toFixed(2) }} MB)</small
+              ></span
+            >
+            <div class="attachment-actions">
+              <button
+                type="button"
+                :disabled="downloading === attachment.id"
+                @click="downloadAttachment(attachment)"
+              >
+                {{ tr(downloading === attachment.id ? 'Downloading…' : 'Download') }}
+              </button>
+              <button type="button" @click="removeExisting(attachment.id)">
+                {{ tr('Remove') }}
+              </button>
+            </div>
           </div>
+          <small v-if="downloadError" class="error">{{ downloadError }}</small>
           <div
             v-for="attachment in existingAttachments.filter((a) =>
               removedAttachmentIds.includes(a.id),
@@ -555,5 +596,19 @@ th {
   .phone-row {
     grid-template-columns: 1fr;
   }
+}
+</style>
+<style scoped>
+.attachment-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.attachment-actions button:first-child {
+  color: #2877a6;
+}
+.attachment-actions button:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 </style>

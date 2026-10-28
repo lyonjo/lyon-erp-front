@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
@@ -10,10 +10,33 @@ const { t, te } = useI18n(),
 const router = useRouter()
 const route = useRoute()
 const { company, loading, error: loadError, fetchCustomerCompany } = useCustomerCompany()
+const existingAttachments = ref([])
+const attachmentLoading = ref(false)
+const attachmentError = ref('')
+const companyWithAttachments = computed(() =>
+  company.value ? { ...company.value, attachments: existingAttachments.value } : null,
+)
+async function loadAttachments(id) {
+  existingAttachments.value = []
+  attachmentError.value = ''
+  attachmentLoading.value = true
+  try {
+    const response = await api.get(`/rent/customer-companies/${id}/attachments`)
+    const payload = response.data?.data ?? response.data
+    existingAttachments.value = Array.isArray(payload) ? payload : (payload?.data ?? [])
+  } catch (error) {
+    attachmentError.value = error.response?.data?.message || 'Could not load company attachments.'
+  } finally {
+    attachmentLoading.value = false
+  }
+}
 watch(
   () => route.params.id,
   (id) => {
-    if (id) fetchCustomerCompany(id)
+    if (id) {
+      fetchCustomerCompany(id)
+      loadAttachments(id)
+    }
   },
   { immediate: true },
 )
@@ -63,15 +86,21 @@ async function save({ fd, attachments, removedAttachmentIds }) {
     {{ loadError }}
     <button @click="fetchCustomerCompany(route.params.id)">{{ tr('Retry') }}</button>
   </div>
-  <CustomerCompanyForm
-    v-else
-    :mode="'edit'"
-    :company="company"
-    :saving="saving"
-    :errors="errors"
-    :banner="banner"
-    @submit="save"
-  />
+  <div v-else>
+    <p v-if="attachmentLoading" class="attachment-state">{{ tr('Loading attachments…') }}</p>
+    <p v-if="attachmentError" class="attachment-error">
+      {{ attachmentError }}
+      <button type="button" @click="loadAttachments(route.params.id)">{{ tr('Retry') }}</button>
+    </p>
+    <CustomerCompanyForm
+      :mode="'edit'"
+      :company="companyWithAttachments"
+      :saving="saving"
+      :errors="errors"
+      :banner="banner"
+      @submit="save"
+    />
+  </div>
 </template>
 <style scoped>
 .page {
@@ -352,5 +381,24 @@ th {
   .per-page {
     margin-inline-start: 0;
   }
+}
+</style>
+<style scoped>
+.attachment-state {
+  padding: 8px 16px;
+  color: #64748b;
+  text-align: center;
+}
+.attachment-error {
+  padding: 10px 16px;
+  margin: 8px auto;
+  max-width: 600px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.attachment-error button {
+  margin-inline-start: 8px;
+  cursor: pointer;
 }
 </style>
