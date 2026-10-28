@@ -185,11 +185,9 @@ function validate() {
   const e = {}
   if (!form.name.trim()) e.name = [tr('Customer name is required.')]
   if (!form.client_side) e.client_side = [tr('Please select a client side.')]
-  for (const key of ['id_front', 'license_front']) {
+  for (const key of ['id_front']) {
     if (!files[key] && !existingEndpoints.value[key]) {
-      e[key] = [
-        tr(key === 'id_front' ? 'Front ID photo is required.' : 'Front license photo is required.'),
-      ]
+      e[key] = [tr('Front ID photo is required.')]
     }
   }
   return e
@@ -409,9 +407,7 @@ const back = () =>
                 v-for="d in DOCS.id"
                 :key="d.key"
                 v-model="files[d.key]"
-                :label="
-                  ['id_front', 'license_front'].includes(d.key) ? `${tr(d.label)} *` : tr(d.label)
-                "
+                :label="d.key === 'id_front' ? `${tr(d.label)} *` : tr(d.label)"
                 :error="err(d.key)"
                 :existing-endpoint="existingEndpoints[d.key]"
               />
@@ -424,9 +420,7 @@ const back = () =>
                 v-for="d in DOCS.license"
                 :key="d.key"
                 v-model="files[d.key]"
-                :label="
-                  ['id_front', 'license_front'].includes(d.key) ? `${tr(d.label)} *` : tr(d.label)
-                "
+                :label="d.key === 'id_front' ? `${tr(d.label)} *` : tr(d.label)"
                 :error="err(d.key)"
                 :existing-endpoint="existingEndpoints[d.key]"
               />
