@@ -99,16 +99,19 @@ onMounted(load)
   <section class="rc-page" :dir="locale === 'ar' ? 'rtl' : 'ltr'">
     <div class="top">
       <h2>{{ tr('Edit Vehicle Bookings', 'إدارة حجوزات السيارة') }}</h2>
-      <button class="primary" @click="router.push('/rent/car-rentered')">
-        {{ tr('Back to Cars', 'العودة للسيارات') }}
-      </button>
+      <div class="top-actions">
+        <button class="primary" :disabled="loading" @click="edit()">
+          + {{ tr('Add Reservation', 'إضافة حجز') }}</button
+        ><button class="primary" @click="router.push('/rent/car-rentered')">
+          {{ tr('Back to Reservations', 'العودة للحجوزات') }}
+        </button>
+      </div>
     </div>
     <div v-if="loading" class="status">{{ tr('Loading...', 'جاري التحميل...') }}</div>
     <template v-else
       ><div class="car-info">
         <strong>{{ tr('Vehicle Number', 'رقم السيارة') }}: {{ data.car?.number }}</strong> —
         {{ data.car?.brand?.name }} {{ data.car?.model?.name }} {{ data.car?.model_year }}
-        <button class="primary" @click="edit()">+ {{ tr('Add Reservation', 'إضافة حجز') }}</button>
       </div>
       <div v-if="error" class="error">{{ error }}</div>
       <div class="scroll">
@@ -132,8 +135,24 @@ onMounted(load)
               <td>{{ row.booking?.ticket_number || '—' }}</td>
               <td>
                 <button class="action" @click="edit(row)">✎ {{ tr('Edit', 'تعديل') }}</button
-                ><button class="action danger" @click="remove(row)">
-                  ▤ {{ tr('Remove', 'إزالة') }}
+                ><button class="action danger delete-action" @click="remove(row)">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4h8v2" />
+                    <path d="M19 6l-1 14H6L5 6" />
+                    <path d="M10 10v6M14 10v6" /></svg
+                  >{{ tr('Delete', 'حذف') }}
                 </button>
               </td>
             </tr>
@@ -220,6 +239,20 @@ onMounted(load)
 }
 .top h2 {
   font-size: 24px;
+}
+.top-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  direction: ltr;
+}
+.delete-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.car-info {
+  flex-wrap: wrap;
 }
 .primary {
   border: 0;
