@@ -65,13 +65,8 @@ watch(
 <template>
   <div class="page">
     <div class="topbar">
-      <button class="back" @click="router.push('/rent/customer-companies')">{{ tr('Back') }}</button
-      ><button
-        v-if="company"
-        class="btn-edit"
-        @click="router.push(`/rent/customer-companies/${route.params.id}/edit`)"
-      >
-        {{ tr('Edit') }}
+      <button class="back" @click="router.push('/rent/customer-companies')">
+        {{ tr('Back') }}
       </button>
     </div>
     <p v-if="loading" class="state">{{ tr('Loading…') }}</p>
