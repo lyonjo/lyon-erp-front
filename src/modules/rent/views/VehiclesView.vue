@@ -302,14 +302,6 @@ function uiTableGoToPage(n) {
       <form class="modal" @submit.prevent="save">
         <button type="button" class="close" @click="showModal = false">×</button>
         <h2>{{ editingId ? text('Edit', 'تعديل') : text('Add New', 'إضافة') }} {{ title }}</h2>
-        <label
-          >{{ text('Name', 'الاسم')
-          }}<input
-            v-model.trim="entry.name"
-            required
-            maxlength="150"
-            :placeholder="text('Enter name', 'أدخل الاسم')" /></label
-        ><small v-if="fieldErrors.name" class="error">{{ fieldErrors.name[0] }}</small>
         <label v-if="active === 'models'"
           >{{ text('Brand', 'الماركة')
           }}<select v-model="entry.brand_id" required>
@@ -318,6 +310,14 @@ function uiTableGoToPage(n) {
           </select></label
         >
         <small v-if="fieldErrors.brand_id" class="error">{{ fieldErrors.brand_id[0] }}</small>
+        <label
+          >{{ text('Name', 'الاسم')
+          }}<input
+            v-model.trim="entry.name"
+            required
+            maxlength="150"
+            :placeholder="text('Enter name', 'أدخل الاسم')" /></label
+        ><small v-if="fieldErrors.name" class="error">{{ fieldErrors.name[0] }}</small>
         <label v-if="active === 'features'"
           >{{ text('Feature Image (optional)', 'صورة الميزة (اختياري)')
           }}<input
