@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCustomerCompany } from '@/composables/useCustomerCompany'
 import api from '@/api'
+import CompanyAttachmentImage from '../components/CompanyAttachmentImage.vue'
 const { t, te } = useI18n()
 const tr = (k) => (te(`rentUi.${k}`) ? t(`rentUi.${k}`) : k)
 const router = useRouter(),
@@ -79,6 +80,7 @@ watch(
         <div
           v-for="[label, value] in [
             ['Email', company.email],
+            ['Admin Name', company.admin_name],
             ['Phone', [company.country_code, company.phone].filter(Boolean).join(' ')],
             ['Address', company.address],
             ['Black List', tr(company.is_blacklist ? 'Yes' : 'No')],
@@ -105,6 +107,7 @@ watch(
         </p>
         <ul v-else class="attachment-list">
           <li v-for="attachment in attachments" :key="attachment.id">
+            <CompanyAttachmentImage :attachment="attachment" :company-id="route.params.id" />
             <span class="attachment-name" dir="auto"
               >{{ attachment.original_name || 'Attachment' }}
               <small v-if="attachment.size"
@@ -466,5 +469,11 @@ th {
 .download-btn:disabled {
   opacity: 0.5;
   cursor: wait;
+}
+</style>
+
+<style scoped>
+.attachment-name {
+  flex: 1;
 }
 </style>

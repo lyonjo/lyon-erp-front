@@ -3,6 +3,7 @@ import { reactive, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CountrySearchSelect from './CountrySearchSelect.vue'
+import CompanyAttachmentImage from './CompanyAttachmentImage.vue'
 import api from '@/api'
 import { dialingOptions } from '../constants/allCountries'
 const { t, te } = useI18n()
@@ -20,6 +21,7 @@ const isEdit = computed(() => props.mode === 'edit')
 const form = reactive({
   name: '',
   email: '',
+  admin_name: '',
   country_code: '',
   phone: '',
   address: '',
@@ -164,6 +166,13 @@ const back = () =>
             >{{ err('email') }}</small
           ></label
         >
+        <label class="field full"
+          ><span>{{ tr('Admin Name') }}</span
+          ><input v-model="form.admin_name" :placeholder="tr('Enter admin name')" /><small
+            v-if="err('admin_name')"
+            >{{ err('admin_name') }}</small
+          ></label
+        >
         <div class="phone-row full" dir="ltr">
           <div class="field country-field">
             <span>{{ tr('Country Code') }}</span
@@ -205,7 +214,8 @@ const back = () =>
           <small v-if="fileError" class="error">{{ fileError }}</small>
           <small v-if="err('attachments')" class="error">{{ err('attachments') }}</small>
           <div v-for="(file, index) in attachments" :key="index" class="attachment-entry">
-            <span>{{ file.name }} ({{ (file.size / 1024 / 1024).toFixed(2) }} MB)</span
+            <CompanyAttachmentImage :file="file" /><span
+              >{{ file.name }} ({{ (file.size / 1024 / 1024).toFixed(2) }} MB)</span
             ><button type="button" @click="removePending(index)">{{ tr('Remove') }}</button>
           </div>
           <div
@@ -213,6 +223,7 @@ const back = () =>
             :key="attachment.id"
             class="attachment-entry"
           >
+            <CompanyAttachmentImage :attachment="attachment" :company-id="props.company?.id" />
             <span
               >{{ attachment.original_name || attachment.name }}
               <small v-if="attachment.size"
@@ -610,5 +621,28 @@ th {
 .attachment-actions button:disabled {
   opacity: 0.5;
   cursor: wait;
+}
+</style>
+
+<style scoped>
+.page > .topbar {
+  width: min(100%, 650px);
+  box-sizing: border-box;
+  margin: 0 auto 16px;
+  padding: 0 24px;
+  direction: ltr;
+}
+.page > .card {
+  box-sizing: border-box;
+  width: min(100%, 650px);
+}
+.attachment-entry > span {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .page > .topbar {
+    padding: 0 8px;
+  }
 }
 </style>
