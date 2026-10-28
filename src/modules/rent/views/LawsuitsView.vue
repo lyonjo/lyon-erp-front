@@ -65,7 +65,7 @@ async function remove() {
 onMounted(load)
 
 function uiTableGoToPage(n) {
-  if (n < 1 || n > Number(meta.last_page) || n === page.value) return
+  if (n < 1 || n > Number(meta.value.last_page) || n === page.value) return
   go(n)
 }
 </script>
@@ -73,11 +73,8 @@ function uiTableGoToPage(n) {
   <section class="law-page">
     <div class="law-head">
       <h2>{{ tr('Lawsuits', 'القضايا') }}</h2>
-      <button class="primary" @click="router.push('/rent/lawsuits/create')">
-        + {{ tr('New Lawsuit', 'قضية جديدة') }}
-      </button>
     </div>
-    <div class="law-toolbar">
+    <div class="law-toolbar ui-table-toolbar">
       <input v-model="search" :placeholder="tr('Search...', 'بحث...')" /><select
         v-model.number="perPage"
       >
@@ -85,6 +82,9 @@ function uiTableGoToPage(n) {
         <option :value="30">30</option>
         <option :value="50">50</option>
       </select>
+      <button class="primary" @click="router.push('/rent/lawsuits/create')">
+        + {{ tr('New Lawsuit', 'قضية جديدة') }}
+      </button>
     </div>
     <p v-if="error" class="error">{{ error }}</p>
     <div class="law-card">

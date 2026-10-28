@@ -92,7 +92,7 @@ async function confirmDelete() {
 }
 
 function uiTableGoToPage(n) {
-  if (n < 1 || n > Number(meta.last_page) || n === page.value) return
+  if (n < 1 || n > Number(meta.value.last_page) || n === page.value) return
   page.value = n
 }
 </script>
@@ -113,20 +113,18 @@ function uiTableGoToPage(n) {
           "
           :aria-label="tr('Search', 'بحث')"
         />
-        <div class="toolbar-right">
-          <select
-            v-model.number="perPage"
-            class="page-size"
-            :aria-label="tr('Rows per page', 'عدد السجلات')"
-          >
-            <option v-for="n in [10, 15, 25, 50, 100]" :key="n" :value="n">
-              {{ n }} {{ tr('per page', 'لكل صفحة') }}
-            </option>
-          </select>
-          <button class="primary" @click="router.push('/rent/external-vehicle/create')">
-            + {{ tr('New External Vehicle', 'مركبة خارجية جديدة') }}
-          </button>
-        </div>
+        <select
+          v-model.number="perPage"
+          class="page-size"
+          :aria-label="tr('Rows per page', 'عدد السجلات')"
+        >
+          <option v-for="n in [10, 15, 25, 50, 100]" :key="n" :value="n">
+            {{ n }} {{ tr('per page', 'لكل صفحة') }}
+          </option>
+        </select>
+        <button class="primary" @click="router.push('/rent/external-vehicle/create')">
+          + {{ tr('New External Vehicle', 'مركبة خارجية جديدة') }}
+        </button>
       </div>
       <p v-if="error" class="alert">
         {{ error }} <button @click="load">{{ tr('Retry', 'إعادة المحاولة') }}</button>
