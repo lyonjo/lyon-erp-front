@@ -54,6 +54,14 @@ async function loadCompanies() {
     companiesLoading.value = false
   }
 }
+function focusCompanySearch() {
+  companyOpen.value = true
+  loadCompanies()
+}
+function inputCompanySearch() {
+  companyId.value = ''
+  companyOpen.value = true
+}
 function toggleCompanyOptions() {
   companyOpen.value = !companyOpen.value
   if (companyOpen.value) loadCompanies()
@@ -154,14 +162,8 @@ onBeforeUnmount(() => {
           v-model="companyQuery"
           :placeholder="tr('Select customer company', 'اختر شركة العميل')"
           :aria-label="tr('Customer company', 'شركة العميل')"
-          @focus="
-            companyOpen = true
-            loadCompanies()
-          "
-          @input="
-            companyId = ''
-            companyOpen = true
-          "
+          @focus="focusCompanySearch"
+          @input="inputCompanySearch"
         />
         <button type="button" @click="toggleCompanyOptions">⌄</button>
         <div v-if="companyOpen" class="options">
