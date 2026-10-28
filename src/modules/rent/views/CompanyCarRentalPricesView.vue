@@ -54,6 +54,10 @@ async function loadCompanies() {
     companiesLoading.value = false
   }
 }
+function toggleCompanyOptions() {
+  companyOpen.value = !companyOpen.value
+  if (companyOpen.value) loadCompanies()
+}
 function chooseCompany(c) {
   companyId.value = String(c.id)
   companyQuery.value = c.name
@@ -159,15 +163,7 @@ onBeforeUnmount(() => {
             companyOpen = true
           "
         />
-        <button
-          type="button"
-          @click="
-            companyOpen = !companyOpen
-            if (companyOpen) loadCompanies()
-          "
-        >
-          ⌄
-        </button>
+        <button type="button" @click="toggleCompanyOptions">⌄</button>
         <div v-if="companyOpen" class="options">
           <button v-for="c in companies" :key="c.id" type="button" @click="chooseCompany(c)">
             {{ c.name }}
