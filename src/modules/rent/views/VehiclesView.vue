@@ -246,8 +246,7 @@ function uiTableGoToPage(n) {
               <td class="actions">
                 <button @click="router.push(`/rent/cars/${v.id}`)">
                   ◉ {{ text('View', 'عرض') }}</button
-                ><button @click="edit(v)">✎ {{ text('Edit', 'تعديل') }}</button
-                ><button @click="remove(v)">{{ text('Delete', 'حذف') }}</button>
+                ><button @click="edit(v)">✎ {{ text('Edit', 'تعديل') }}</button>
               </td>
             </tr>
             <tr v-if="!loading && !rows.length">

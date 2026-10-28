@@ -28,7 +28,7 @@ function empty() {
     number: '',
     brand_id: '',
     model_id: '',
-    model_year: new Date().getFullYear(),
+    model_year: '',
     company_id: '',
     branch_id: '',
     vin_number: '',
@@ -36,7 +36,7 @@ function empty() {
     engine_size: null,
     registration_number: '',
     fuel_type: '',
-    passengers_number: 4,
+    passengers_number: '',
     gearbox_type: '',
     has_blutooth: false,
     has_camera: false,
@@ -108,24 +108,6 @@ async function getAll() {
   }
 }
 onMounted(getAll)
-function next() {
-  if (
-    !state.value.number ||
-    !state.value.brand_id ||
-    !state.value.model_id ||
-    !state.value.company_id ||
-    !state.value.branch_id ||
-    !state.value.model_year
-  ) {
-    err.value = t(
-      'Complete the required vehicle information first.',
-      'أكمل معلومات المركبة المطلوبة أولاً.',
-    )
-    return
-  }
-  err.value = ''
-  step.value = 1
-}
 async function save() {
   if (readOnly.value) return
   saving.value = true
@@ -288,28 +270,16 @@ async function save() {
               <option value="automatic">{{ t('Automatic', 'أوتوماتيكي') }}</option>
             </select></label
           >
-          <label
+          <label class="full-row"
             >{{ t('Current KM', 'الكيلومترات الحالية') }} *<input
               v-model.number="state.current_km"
               type="number"
               min="0"
           /></label>
-          <label
-            >{{ t('Odometer', 'عداد المسافة')
-            }}<input v-model.number="state.odometer" type="number" min="0"
-          /></label>
-          <label class="toggle"
-            ><span>{{ t('Camera', 'كاميرا') }}</span
-            ><input v-model="state.has_camera" type="checkbox"
-          /></label>
-          <label class="toggle"
-            ><span>{{ t('Bluetooth', 'بلوتوث') }}</span
-            ><input v-model="state.has_blutooth" type="checkbox"
-          /></label>
           <div class="feature-group">
             <strong>{{ t('Extra Features', 'الميزات الإضافية') }}</strong>
             <div class="feature-list">
-              <label v-for="f in features" :key="f.id" class="feature"
+              <label v-for="f in features" :key="f.id" class="feature toggle"
                 ><input type="checkbox" :value="f.id" v-model="state.features" />{{ f.name }}</label
               >
             </div>
@@ -317,15 +287,6 @@ async function save() {
         </div>
       </fieldset>
       <p v-for="(msgs, key) in errors" :key="key" class="field-error">{{ key }}: {{ msgs[0] }}</p>
-      <div class="bottom-actions">
-        <button v-if="step === 1" class="secondary" @click="step = 0">
-          {{ t('Previous', 'السابق') }}</button
-        ><button v-if="step === 0" class="blue" @click="next">
-          {{ t('Next: Vehicle Features', 'التالي: ميزات المركبة') }}</button
-        ><button v-else-if="!readOnly" class="blue" :disabled="saving" @click="save">
-          {{ t('Save Vehicle', 'حفظ المركبة') }}
-        </button>
-      </div>
     </section>
   </div>
 </template>
@@ -468,6 +429,9 @@ async function save() {
 .feature-group {
   grid-column: 1/-1;
 }
+.fields .full-row {
+  grid-column: 1 / -1;
+}
 .feature-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -476,9 +440,10 @@ async function save() {
 }
 .feature {
   display: flex !important;
-  flex-direction: row !important;
+  flex-direction: row-reverse !important;
+  justify-content: flex-end;
   align-items: center;
-  gap: 10px !important;
+  gap: 12px !important;
 }
 .bottom-actions {
   display: flex;
