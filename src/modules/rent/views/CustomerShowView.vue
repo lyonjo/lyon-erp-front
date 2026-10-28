@@ -94,14 +94,6 @@ const documentEndpoint = (key) =>
       <button class="back" type="button" @click="router.push('/rent/customers')">
         ← Customers
       </button>
-      <button
-        v-if="c && auth.can('rent.customers.manage')"
-        class="btn-edit"
-        type="button"
-        @click="router.push(`/rent/customers/${c.id}/edit`)"
-      >
-        {{ tr('Edit') }}
-      </button>
     </div>
     <p v-if="loading" class="state">{{ tr('Loading\u2026') }}</p>
     <p v-else-if="error" class="state">{{ error }}</p>

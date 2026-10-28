@@ -23,7 +23,7 @@ const form = reactive({
   country_code: '',
   phone: '',
   address: '',
-  is_multi_contract: false,
+  is_multi_contract: true,
   is_blacklist: false,
 })
 watch(
