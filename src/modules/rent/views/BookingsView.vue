@@ -228,7 +228,7 @@ function uiTableGoToPage(n) {
   <section class="bk-page" :dir="locale === 'ar' ? 'rtl' : 'ltr'">
     <div class="bk-head">
       <h2>{{ tr('Booking', 'الحجوزات') }}</h2>
-      <div class="bk-header-actions">
+      <div v-if="tab === 'pending'" class="bk-header-actions">
         <button class="bk-secondary" type="button" @click="openAvailability">
           {{ tr('Available Cars', 'السيارات المتاحة') }}</button
         ><button class="bk-primary" @click="router.push('/rent/booking/create')">
