@@ -1,4 +1,19 @@
 <script setup>
+// Compact numbered pagination, with ellipses for large result sets.
+function visiblePages(current, last) {
+  const total = Math.max(1, Number(last) || 1)
+  const currentPage = Math.min(total, Math.max(1, Number(current) || 1))
+  const pages = new Set([1, total])
+  for (let n = Math.max(1, currentPage - 1); n <= Math.min(total, currentPage + 1); n++)
+    pages.add(n)
+  const result = []
+  for (const n of [...pages].sort((a, b) => a - b)) {
+    if (result.length && n - result[result.length - 1] > 1) result.push('…')
+    result.push(n)
+  }
+  return result
+}
+
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -12,7 +27,7 @@ const imageBlobs = ref({}),
   error = ref(''),
   search = ref(''),
   page = ref(1),
-  perPage = ref(10),
+  perPage = ref(50),
   meta = ref({ current_page: 1, last_page: 1, total: 0 }),
   pendingDelete = ref(null),
   deleting = ref(false),
@@ -129,7 +144,6 @@ function nextPage() {
   <section class="cr-list">
     <div class="top">
       <h2>{{ tr('Car Rental Price Customer', 'أسعار تأجير السيارات للعملاء') }}</h2>
-      <button class="primary" @click="goCreate">+ {{ tr('New Car', 'سيارة جديدة') }}</button>
     </div>
     <div class="toolbar">
       <input
@@ -137,12 +151,13 @@ function nextPage() {
         :placeholder="
           tr('Search brand, model or year...', 'ابحث عن الماركة أو الموديل أو السنة...')
         "
-      /><select v-model.number="perPage">
+      /><select v-model.number="perPage" class="per-page">
         <option :value="10">10</option>
         <option :value="15">15</option>
         <option :value="25">25</option>
         <option :value="50">50</option>
       </select>
+      <button class="primary" @click="goCreate">+ {{ tr('New Car', 'سيارة جديدة') }}</button>
     </div>
     <p v-if="error" class="error">
       {{ error }} <button @click="load">{{ tr('Retry', 'إعادة المحاولة') }}</button>
@@ -186,10 +201,26 @@ function nextPage() {
       </table>
     </div>
     <div class="pagination">
-      <span>{{ meta.total }} {{ tr('records', 'سجل') }}</span
-      ><button :disabled="page <= 1 || loading" @click="previousPage">‹</button
-      ><span>{{ page }} / {{ meta.last_page || 1 }}</span
-      ><button :disabled="page >= (meta.last_page || 1) || loading" @click="nextPage">›</button>
+      <button class="page-arrow" :disabled="loading || page <= 1" @click="previousPage">‹</button>
+      <template v-for="(p, i) in visiblePages(page, meta.last_page)" :key="`${p}-${i}`">
+        <span v-if="p === '…'" class="page-ellipsis">…</span>
+        <button
+          v-else
+          class="page-number"
+          :class="{ active: p === page }"
+          :disabled="loading"
+          @click="page = p"
+        >
+          {{ p }}
+        </button>
+      </template>
+      <button
+        class="page-arrow"
+        :disabled="loading || page >= (meta.last_page || 1)"
+        @click="nextPage"
+      >
+        ›
+      </button>
     </div>
     <div v-if="pendingDelete" class="backdrop" @click.self="closeDelete">
       <div class="modal" role="dialog" aria-modal="true">
@@ -273,7 +304,7 @@ table {
   font-size: 13px;
 }
 th {
-  text-align: start;
+  text-align: center;
   font-weight: 500;
   color: #9a9db3;
 }
@@ -363,5 +394,111 @@ tr:last-child td {
 }
 .error {
   color: #b91c1c;
+}
+
+/* Consistent Customer-section table layout; independent of page direction. */
+.toolbar {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 14px;
+  direction: ltr;
+}
+.toolbar .search-box,
+.toolbar > input {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+}
+.toolbar .per-page,
+.toolbar > select {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  margin: 0 !important;
+}
+.toolbar .btn-new,
+.toolbar .primary {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+.toolbar .type-filter {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+.table-card th,
+.table-card td,
+.table-wrap th,
+.table-wrap td,
+.table-box th,
+.table-box td {
+  text-align: center !important;
+}
+.table-card td[dir='auto'],
+.table-card td[dir='ltr'],
+.table-wrap td[dir],
+.table-box td[dir] {
+  text-align: center !important;
+}
+.pagination {
+  display: flex !important;
+  direction: ltr;
+  align-items: center;
+  justify-content: center !important;
+  gap: 7px !important;
+  padding: 16px 0 !important;
+  flex-wrap: wrap;
+}
+.pagination .page-number {
+  width: 35px;
+  height: 35px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: #f1f3f6;
+  color: #142d4f;
+  cursor: pointer;
+}
+.pagination .page-number.active {
+  background: #3b82f6 !important;
+  color: white !important;
+}
+.pagination .page-ellipsis {
+  padding: 0 5px;
+  color: #6b7280;
+}
+.pagination .page-arrow {
+  border: 0 !important;
+  background: transparent !important;
+  padding: 6px 10px !important;
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    row-gap: 10px;
+  }
+  .toolbar .search-box,
+  .toolbar > input {
+    width: 100%;
+    min-width: 0;
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .toolbar .per-page,
+  .toolbar > select {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+  .toolbar .btn-new,
+  .toolbar .primary,
+  .toolbar .type-filter {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+  }
 }
 </style>
