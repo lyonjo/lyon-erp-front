@@ -477,3 +477,13 @@ th {
   flex: 1;
 }
 </style>
+
+<style scoped>
+/* Match the outer width of the 600px content + 24px padding on each side + borders. */
+.topbar {
+  width: 100%;
+  max-width: 650px;
+  margin: 0 auto 16px;
+  box-sizing: border-box;
+}
+</style>
