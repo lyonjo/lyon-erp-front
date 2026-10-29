@@ -24,7 +24,7 @@ const wholePrice = (value) =>
     : Number.isFinite(Number(value))
       ? Math.round(Number(value))
       : ''
-const newInterval = () => ({ start: 1, end: 2, price: '' })
+const newInterval = () => ({ start: 1, end: 2, price: 0 })
 const newPeriod = () => ({ start_date: '', end_date: '', intervals: [newInterval()] })
 const back = () => router.push('/rent/car-rental-price-company')
 
@@ -59,7 +59,7 @@ async function init() {
       intervals: (p.intervals || []).map((i) => ({
         start: i.start,
         end: i.end,
-        price: wholePrice(i.price),
+        price: car.value.customized ? wholePrice(i.price) : 0,
       })),
     }))
     if (!periods.value.length) periods.value = [newPeriod()]
@@ -136,8 +136,8 @@ onBeforeUnmount(() => Object.values(imageUrls.value).forEach(URL.revokeObjectURL
       <p v-if="!car.customized" class="info">
         {{
           tr(
-            'Base customer prices are prefilled. Saving creates pricing for this company only.',
-            'تم تعبئة أسعار العملاء الأساسية. الحفظ ينشئ تسعيراً خاصاً بهذه الشركة فقط.',
+            'Set company-specific prices below. Prices start at 0 until this company is customized.',
+            'تبدأ أسعار الشركة من 0 حتى يتم تخصيصها. أدخل أسعار الشركة ثم احفظ.',
           )
         }}
       </p>
@@ -197,12 +197,24 @@ onBeforeUnmount(() => Object.values(imageUrls.value).forEach(URL.revokeObjectURL
                 </div>
                 <button
                   v-if="p.intervals.length > 1"
-                  class="danger remove"
+                  class="delete-icon remove"
                   type="button"
-                  :title="tr('Delete internal price', 'حذف سعر الفترة')"
+                  :title="tr('Remove interval', 'حذف الفترة')"
+                  :aria-label="tr('Remove interval', 'حذف الفترة')"
                   @click="removeInterval(p, j)"
                 >
-                  🗑
+                  <svg
+                    class="trash-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 6h18M8 6V4h8v2M5 6l1 14h12l1-14M10 10v7M14 10v7" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -398,6 +410,17 @@ button {
 }
 .remove {
   height: 42px;
+}
+.delete-icon {
+  border: 0;
+  background: none;
+  color: #c23b4b;
+  cursor: pointer;
+}
+.trash-icon {
+  width: 17px;
+  height: 17px;
+  vertical-align: middle;
 }
 .add-interval {
   display: flex;
