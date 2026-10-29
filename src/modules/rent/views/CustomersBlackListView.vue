@@ -57,6 +57,7 @@ const phone = (v) => [v.country_code, v.phone].filter(Boolean).join(' ') || '—
             <th>{{ tr('Type') }}</th>
             <th>{{ tr('Email') }}</th>
             <th>{{ tr('Phone') }}</th>
+            <th>{{ tr('Note') }}</th>
             <th>{{ tr('Black List') }}</th>
           </tr>
         </thead>
@@ -71,12 +72,13 @@ const phone = (v) => [v.country_code, v.phone].filter(Boolean).join(' ') || '—
             </td>
             <td dir="auto">{{ item.email || '—' }}</td>
             <td dir="ltr">{{ phone(item) }}</td>
+            <td dir="auto">{{ item.note || '—' }}</td>
             <td>
               <span class="badge bad">{{ tr('Yes') }}</span>
             </td>
           </tr>
           <tr v-if="!loading && !error && !rows.length">
-            <td colspan="6" class="empty">{{ tr('No blacklisted records found') }}</td>
+            <td colspan="7" class="empty">{{ tr('No blacklisted records found') }}</td>
           </tr>
         </tbody>
       </table>

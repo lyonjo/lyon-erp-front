@@ -54,6 +54,7 @@ const form = reactive({
   address: '',
   is_multi_contract: false,
   is_blacklist: false,
+  note: '',
 })
 const details = reactive({
   nationality: '',
@@ -83,6 +84,7 @@ watch(
     form.address = c.address ?? ''
     form.is_multi_contract = !!c.is_multi_contract
     form.is_blacklist = !!c.is_blacklist
+    form.note = c.note ?? ''
     Object.keys(details).forEach((k) => {
       const v = c.details?.[k] ?? ''
       details[k] = k.includes('date') ? toDate(v) : v
@@ -204,7 +206,7 @@ function buildPayload() {
   }
 
   Object.entries(form).forEach(([k, v]) => {
-    if (k === 'is_blacklist' && !isEdit.value) return
+    if ((k === 'is_blacklist' || k === 'note') && !isEdit.value) return
     put(k, v, k === 'name' || k === 'client_side')
   })
   Object.entries(details).forEach(([k, v]) => put(`details[${k}]`, v))
@@ -328,10 +330,21 @@ const back = () =>
             <small v-if="err('address')">{{ err('address') }}</small>
           </label>
 
+          <label v-if="isEdit" class="field full blacklist-reason">
+            <span>{{ tr('Note') }}</span>
+            <textarea
+              v-model="form.note"
+              rows="3"
+              maxlength="1000"
+              :class="{ bad: err('note') }"
+              :placeholder="tr('Enter note')"
+            />
+            <small v-if="err('note')">{{ err('note') }}</small>
+          </label>
           <div
             v-for="t in toggles"
             :key="t.key"
-            class="switch-card full"
+            class="switch-card"
             :class="{ on: form[t.key], danger: t.danger }"
             @click="form[t.key] = !form[t.key]"
           >
@@ -674,6 +687,31 @@ const back = () =>
   }
   .tabs {
     gap: 20px;
+  }
+}
+</style>
+
+<style scoped>
+.grid > .switch-card {
+  grid-column: auto;
+  min-width: 0;
+}
+.blacklist-reason textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  padding: 11px 12px;
+  min-height: 82px;
+  font: inherit;
+  resize: vertical;
+}
+.blacklist-reason textarea.bad {
+  border-color: #dc2626;
+}
+@media (max-width: 640px) {
+  .grid > .switch-card {
+    grid-column: 1/-1;
   }
 }
 </style>

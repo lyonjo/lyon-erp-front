@@ -27,6 +27,7 @@ const form = reactive({
   address: '',
   is_multi_contract: true,
   is_blacklist: false,
+  note: '',
 })
 watch(
   () => props.company,
@@ -124,7 +125,7 @@ function submit() {
   }
   const fd = new FormData()
   for (const [key, value] of Object.entries(form)) {
-    if (key === 'is_blacklist' && !isEdit.value) continue
+    if ((key === 'is_blacklist' || key === 'note') && !isEdit.value) continue
     if (typeof value === 'boolean') fd.append(key, value ? 1 : 0)
     else if (value !== '' || isEdit.value) fd.append(key, value)
   }
@@ -256,21 +257,34 @@ const back = () =>
             ><button type="button" @click="undoRemove(attachment.id)">{{ tr('Undo') }}</button>
           </div>
         </div>
-        <div class="switch-card">
-          <div>
-            <strong>{{ tr('Multi Contract') }}</strong>
-            <p>
-              {{ tr('Allow this company to hold more than one active contract at the same time.') }}
-            </p>
+        <label v-if="isEdit" class="field full"
+          ><span>{{ tr('Note') }}</span
+          ><textarea
+            v-model="form.note"
+            maxlength="1000"
+            rows="3"
+            :placeholder="tr('Enter note')"
+          /><small v-if="err('note')">{{ err('note') }}</small></label
+        >
+        <div class="toggles-row full">
+          <div class="switch-card">
+            <div>
+              <strong>{{ tr('Multi Contract') }}</strong>
+              <p>
+                {{
+                  tr('Allow this company to hold more than one active contract at the same time.')
+                }}
+              </p>
+            </div>
+            <input type="checkbox" v-model="form.is_multi_contract" />
           </div>
-          <input type="checkbox" v-model="form.is_multi_contract" />
-        </div>
-        <div v-if="isEdit" class="switch-card">
-          <div>
-            <strong>{{ tr('Black List') }}</strong>
-            <p>{{ tr('Mark this company as blacklisted.') }}</p>
+          <div class="switch-card">
+            <div>
+              <strong>{{ tr('Black List') }}</strong>
+              <p>{{ tr('Mark this company as blacklisted.') }}</p>
+            </div>
+            <input type="checkbox" v-model="form.is_blacklist" />
           </div>
-          <input type="checkbox" v-model="form.is_blacklist" />
         </div>
       </div>
     </div>
@@ -643,6 +657,32 @@ th {
 @media (max-width: 640px) {
   .page > .topbar {
     padding: 0 8px;
+  }
+}
+</style>
+
+<style scoped>
+.toggles-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.toggles-row .switch-card {
+  grid-column: auto;
+  min-width: 0;
+}
+.field textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  padding: 12px;
+  box-sizing: border-box;
+  font: inherit;
+  width: 100%;
+  resize: vertical;
+}
+@media (max-width: 640px) {
+  .toggles-row {
+    grid-template-columns: 1fr;
   }
 }
 </style>
