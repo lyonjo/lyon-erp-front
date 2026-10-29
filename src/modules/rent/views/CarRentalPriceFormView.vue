@@ -138,7 +138,11 @@ async function init() {
       periods.value = (d.periods || []).map((p) => ({
         start_date: String(p.start_date || '').slice(0, 10),
         end_date: String(p.end_date || '').slice(0, 10),
-        intervals: (p.intervals || []).map((i) => ({ start: i.start, end: i.end, price: i.price })),
+        intervals: (p.intervals || []).map((i) => ({
+          start: i.start,
+          end: i.end,
+          price: i.price == null || i.price === '' ? '' : Math.round(Number(i.price)),
+        })),
       }))
       if (!periods.value.length) periods.value = [newPeriod()]
       clientType.value = d.client_type || 'customer'
@@ -180,7 +184,10 @@ async function save() {
     p.intervals.forEach((x, j) => {
       body.append(`periods[${i}][intervals][${j}][start]`, x.start)
       body.append(`periods[${i}][intervals][${j}][end]`, x.end)
-      body.append(`periods[${i}][intervals][${j}][price]`, x.price)
+      body.append(
+        `periods[${i}][intervals][${j}][price]`,
+        x.price === '' ? '' : Math.round(Number(x.price)),
+      )
     })
   })
   if (mainFile.value) body.append('main_image', mainFile.value)
@@ -319,10 +326,10 @@ async function save() {
                 <div class="field">
                   <label>{{ tr('Price', 'السعر') }}</label
                   ><input
-                    v-model="x.price"
+                    v-model.number="x.price"
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     :disabled="readOnly"
                     placeholder="Enter price"
                   />
