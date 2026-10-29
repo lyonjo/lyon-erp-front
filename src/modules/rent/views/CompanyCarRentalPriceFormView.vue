@@ -198,9 +198,11 @@ onBeforeUnmount(() => Object.values(imageUrls.value).forEach(URL.revokeObjectURL
                 <button
                   v-if="p.intervals.length > 1"
                   class="danger remove"
+                  type="button"
+                  :title="tr('Delete internal price', 'حذف سعر الفترة')"
                   @click="removeInterval(p, j)"
                 >
-                  ▤
+                  🗑
                 </button>
               </div>
             </div>
