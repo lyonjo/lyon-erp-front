@@ -88,9 +88,33 @@ const rows = ref([])
 const loading = ref(false)
 const error = ref('')
 const search = ref('')
-const perPage = ref(15)
+const perPage = ref(50)
 const page = ref(1)
 const meta = ref({ current_page: 1, last_page: 1, total: 0 })
+const pagerItems = computed(() => {
+  const total = Math.max(1, Number(meta.value.last_page) || 1)
+  const current = Math.min(total, Math.max(1, page.value))
+  const keep = new Set([1, total])
+  for (let index = Math.max(1, current - 1); index <= Math.min(total, current + 1); index++)
+    keep.add(index)
+  // Keep the first and last few pages visible to avoid a lone ellipsis.
+  if (current <= 3) for (let index = 1; index <= Math.min(total, 4); index++) keep.add(index)
+  if (current >= total - 2)
+    for (let index = Math.max(1, total - 3); index <= total; index++) keep.add(index)
+  const pages = [...keep].sort((a, b) => a - b)
+  const items = []
+  pages.forEach((number, index) => {
+    if (index && number > pages[index - 1] + 1) items.push('ellipsis-' + index)
+    items.push(number)
+  })
+  return items
+})
+function goToPage(target) {
+  if (loading.value) return
+  const max = Math.max(1, Number(meta.value.last_page) || 1)
+  if (target >= 1 && target <= max && target !== page.value) page.value = target
+}
+
 let loadSeq = 0
 let debounce = null
 
@@ -202,7 +226,6 @@ async function remove(branch) {
   <div class="branches-page">
     <div class="page-heading">
       <h1>{{ tr('title') }}</h1>
-      <button type="button" class="new-button" @click="showModal()">{{ tr('new') }}</button>
     </div>
 
     <div class="filters">
@@ -219,6 +242,7 @@ async function remove(branch) {
           </option>
         </select>
       </label>
+      <button type="button" class="new-button" @click="showModal()">{{ tr('new') }}</button>
     </div>
 
     <div v-if="error" class="error" role="alert">
@@ -273,17 +297,40 @@ async function remove(branch) {
       </table>
     </div>
 
-    <div class="pagination" dir="ltr">
-      <button type="button" :disabled="loading || page <= 1" @click="page -= 1">
-        {{ tr('prev') }}
-      </button>
-      <span
-        >{{ meta.current_page }} / {{ meta.last_page }} · {{ meta.total }} {{ tr('records') }}</span
+    <nav class="pagination" dir="ltr" :aria-label="isAr ? 'صفحات الفروع' : 'Branch pages'">
+      <button
+        type="button"
+        class="page-arrow"
+        :aria-label="tr('prev')"
+        :disabled="loading || page <= 1"
+        @click="goToPage(page - 1)"
       >
-      <button type="button" :disabled="loading || page >= meta.last_page" @click="page += 1">
-        {{ tr('next') }}
+        ‹
       </button>
-    </div>
+      <template v-for="item in pagerItems" :key="item">
+        <span v-if="typeof item === 'string'" class="page-ellipsis">…</span>
+        <button
+          v-else
+          type="button"
+          class="page-number"
+          :class="{ active: page === item }"
+          :aria-current="page === item ? 'page' : undefined"
+          :disabled="loading"
+          @click="goToPage(item)"
+        >
+          {{ item }}
+        </button>
+      </template>
+      <button
+        type="button"
+        class="page-arrow"
+        :aria-label="tr('next')"
+        :disabled="loading || page >= meta.last_page"
+        @click="goToPage(page + 1)"
+      >
+        ›
+      </button>
+    </nav>
 
     <div v-if="open" class="backdrop" @click.self="closeModal" @keydown.esc="closeModal">
       <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="branch-dialog-title">
@@ -347,7 +394,7 @@ async function remove(branch) {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 38px;
+  margin-bottom: 24px;
 }
 .page-heading h1 {
   font-size: 32px;
@@ -369,11 +416,21 @@ async function remove(branch) {
   background: #488db8;
 }
 .filters {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   margin: 0 0 22px;
+  direction: ltr;
+}
+.filters > input {
+  justify-self: start;
+}
+.filters > .per-page {
+  justify-self: center;
+}
+.filters > .new-button {
+  justify-self: end;
 }
 .filters input,
 .filters select {
@@ -408,7 +465,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   white-space: normal;
-  text-align: start;
+  text-align: center;
 }
 th {
   color: #95a2b9;
@@ -416,14 +473,14 @@ th {
   font-weight: 600;
   border-bottom: 1px solid #e4e8ef;
   padding: 15px 18px;
-  text-align: start;
+  text-align: center;
   white-space: nowrap;
 }
 td {
   font-size: 13px;
   padding: 16px 18px;
   border-bottom: 1px solid #edf1f5;
-  text-align: start;
+  text-align: center;
 }
 tbody tr:last-child td {
   border-bottom: 0;
@@ -438,12 +495,13 @@ tbody tr:last-child td {
 }
 .id-cell {
   width: 85px;
-  text-align: start;
+  text-align: center;
 }
 .row-actions {
   display: flex;
   gap: 16px;
   align-items: center;
+  justify-content: center;
   white-space: nowrap;
 }
 .row-actions button {
@@ -474,22 +532,53 @@ tbody tr:last-child td {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  margin-top: 22px;
-  color: #64748b;
-  font-size: 13px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
 }
 .pagination button {
-  background: #fff;
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
   border: 1px solid #e4e8ef;
-  border-radius: 9px;
-  padding: 9px 15px;
-  color: #64748b;
+  background: #f5f6f9;
+  color: #334155;
+  border-radius: 999px;
   cursor: pointer;
+  padding: 0;
+  font-size: 13px;
 }
-.pagination button:disabled {
+.pagination button.active {
+  color: #fff;
+  background: #3983ef;
+  border-color: #3983ef;
+}
+.pagination button:disabled:not(.active) {
   opacity: 0.45;
-  cursor: not-allowed;
+  cursor: default;
+}
+.page-ellipsis {
+  color: #64748b;
+  padding: 0 5px;
+}
+@media (max-width: 600px) {
+  .filters {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 12px;
+  }
+  .filters > input {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .filters > .per-page {
+    grid-column: 1;
+    justify-self: start;
+  }
+  .filters > .new-button {
+    grid-column: 2;
+    justify-self: end;
+  }
 }
 .error {
   display: flex;
