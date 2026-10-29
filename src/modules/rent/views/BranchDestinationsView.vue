@@ -106,6 +106,22 @@ async function remove(row) {
     error.value = e.response?.data?.message || tr('Delete failed.', 'فشل الحذف.')
   }
 }
+function backToBranches() {
+  // Navigate to the route actually registered for the My Branches page.
+  // The old hard-coded /rent/my-branches path may not exist in this project.
+  const branchesRoute = router
+    .getRoutes()
+    .find(
+      (record) =>
+        /\/(?:branches|my-branches|mybranches)$/i.test(record.path) && !record.path.includes(':'),
+    )
+  if (branchesRoute) {
+    router.push({ path: branchesRoute.path })
+  } else {
+    // This page is normally opened from the branch list.
+    router.back()
+  }
+}
 onMounted(load)
 </script>
 
@@ -113,7 +129,7 @@ onMounted(load)
   <section class="destination-page">
     <header class="heading">
       <h1>{{ tr('Branch Destinations', 'وجهات الفرع') }} — {{ branch?.name }}</h1>
-      <button class="secondary" @click="router.push('/rent/my-branches')">
+      <button class="secondary" @click="backToBranches">
         {{ tr('Back to Branches', 'العودة للفروع') }}
       </button>
     </header>
