@@ -448,19 +448,13 @@ async function save() {
             <span>{{ tr('Total', 'الإجمالي') }}</span
             ><strong>{{ money(total) }}</strong>
           </div>
-          <p class="br-help">
+          <button type="button" class="br-primary br-create" :disabled="saving" @click="save">
             {{
-              tr(
-                'Branch fee is 5 JOD when pickup and return branches differ.',
-                'رسوم الفرع 5 دنانير عند اختلاف موقع الاستلام عن موقع التسليم.',
-              )
+              saving ? tr('Creating...', 'جاري الإنشاء...') : tr('Create Booking', 'إنشاء الحجز')
             }}
-          </p>
+          </button>
         </div>
       </div>
-      <button v-if="selection" class="br-primary br-create" :disabled="saving" @click="save">
-        {{ saving ? tr('Creating...', 'جاري الإنشاء...') : tr('Create Booking', 'إنشاء الحجز') }}
-      </button>
     </div>
   </section>
 </template>
@@ -593,6 +587,11 @@ tr.br-selected {
 .br-tax {
   font-size: 13px;
 }
+.br-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .br-summary > div {
   display: flex;
   justify-content: space-between;
@@ -617,6 +616,7 @@ tr.br-selected {
 }
 .br-create {
   width: 100%;
+  margin-top: auto;
   border-radius: 8px;
 }
 .br-error {
