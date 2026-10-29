@@ -230,6 +230,10 @@ const children = [
   { path: 'gasoline/create', component: () => import('./views/GasolineFormView.vue') },
   { path: 'gasoline/:id/edit', component: () => import('./views/GasolineFormView.vue') },
   { path: 'gasoline/:id/view', component: () => import('./views/GasolineFormView.vue') },
+  {
+    path: 'branches/:id/destinations',
+    component: () => import('./views/BranchDestinationsView.vue'),
+  },
 ]
 
 export default {

@@ -18,6 +18,7 @@ const options = ref({
   customer_companies: [],
   branches: [],
   extra_items: [],
+  branch_destinations: [],
   settings: { tax_percent: 0, currency: 'JOD' },
 })
 const form = ref({
@@ -69,14 +70,36 @@ const currency = computed(() => options.value.settings.currency || 'JOD')
 const extra = computed(() =>
   selectedItems.value.reduce((sum, x) => sum + Number(x.price) * (x.is_daily ? days.value : 1), 0),
 )
-const branchFee = computed(() =>
-  selection.value &&
-  pickup.value &&
-  dropoff.value &&
-  String(pickup.value.id) !== String(dropoff.value.id)
-    ? 5
-    : 0,
+const availableReturnBranches = computed(() => {
+  const pickupId = String(form.value.pick_up_branch_id || '')
+  if (!pickupId) return []
+  const ids = new Set([pickupId])
+  for (const dest of options.value.branch_destinations || []) {
+    if (String(dest.branch_id) === pickupId) ids.add(String(dest.destination_branch_id))
+  }
+  return options.value.branches.filter((branch) => ids.has(String(branch.id)))
+})
+watch(
+  () => form.value.pick_up_branch_id,
+  () => {
+    if (
+      !availableReturnBranches.value.some(
+        (b) => String(b.id) === String(form.value.return_branch_id),
+      )
+    ) {
+      form.value.return_branch_id = form.value.pick_up_branch_id || ''
+    }
+  },
 )
+const branchFee = computed(() => {
+  const startId = String(form.value.pick_up_branch_id || '')
+  const endId = String(form.value.return_branch_id || '')
+  if (!startId || !endId || startId === endId) return 0
+  const matched = (options.value.branch_destinations || []).find(
+    (dest) => String(dest.branch_id) === startId && String(dest.destination_branch_id) === endId,
+  )
+  return matched ? Number(matched.price) : 0
+})
 const taxableBase = computed(
   () => (Number(selection.value?.day_price) || 0) * days.value + extra.value,
 )
@@ -299,7 +322,9 @@ async function save() {
           <label
             >{{ tr('Return Location', 'موقع التسليم') }} *<select v-model="form.return_branch_id">
               <option value="">{{ tr('Choose branch', 'اختر فرعاً') }}</option>
-              <option v-for="b in options.branches" :key="b.id" :value="b.id">{{ b.name }}</option>
+              <option v-for="b in availableReturnBranches" :key="b.id" :value="b.id">
+                {{ b.name }}
+              </option>
             </select></label
           >
           <button class="br-primary br-search" :disabled="searching" @click="searchCars">
