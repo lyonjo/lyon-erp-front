@@ -62,6 +62,8 @@ const dropoff = computed(() =>
 const selectedItems = computed(() =>
   options.value.extra_items.filter((x) => form.value.extra_item_ids.includes(x.id)),
 )
+// Server search calculates days using the tenant's additional_hours setting.
+// The watch on pickup/drop-off clears stale selections whenever the dates change.
 const days = computed(() => selection.value?.total_days ?? 0)
 const currency = computed(() => options.value.settings.currency || 'JOD')
 const extra = computed(() =>

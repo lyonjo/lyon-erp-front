@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
+import { billableRentalDays } from '../utils/billableRentalDays'
 const route = useRoute(),
   router = useRouter(),
   { locale } = useI18n()
@@ -61,10 +62,13 @@ const dateKeys = [
   'license_date_of_expire',
 ]
 const days = computed(() => {
-  const s = `${rdate(booking.value.start_date)}T${rtime(booking.value.start_time)}:00`
-  const e = `${endDate.value}T${endTime.value}:00`
-  const n = (new Date(e).getTime() - new Date(s).getTime()) / 86400000
-  return Number.isFinite(n) && n > 0 ? Math.max(1, Math.ceil(n)) : 0
+  return billableRentalDays(
+    rdate(booking.value.start_date),
+    rtime(booking.value.start_time),
+    endDate.value,
+    endTime.value,
+    cfg.value.additional_hours ?? 0,
+  )
 })
 const pricing = computed(() => {
   const periods = booking.value.rental_price?.periods || []

@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
+import { billableRentalDays } from '../utils/billableRentalDays'
 const route = useRoute(),
   router = useRouter()
 const { locale } = useI18n()
@@ -103,10 +104,13 @@ const rentalDays = computed(() => {
     startTime = record.value.start_time
   if (!startDate || !startTime || !dropoffDate.value || !dropoffTime.value)
     return Number(record.value.total_days || 0)
-  const start = new Date(`${String(startDate).slice(0, 10)}T${String(startTime).slice(0, 5)}:00`)
-  const end = new Date(`${dropoffDate.value}T${dropoffTime.value}:00`)
-  const millis = end.getTime() - start.getTime()
-  return Number.isFinite(millis) && millis > 0 ? Math.max(1, Math.ceil(millis / 86400000)) : 0
+  return billableRentalDays(
+    startDate,
+    startTime,
+    dropoffDate.value,
+    dropoffTime.value,
+    data.value?.additional_hours ?? 0,
+  )
 })
 // Mirrors the server's period and interval selection. Laravel validates again on submit.
 const matchedPricing = computed(() => {
