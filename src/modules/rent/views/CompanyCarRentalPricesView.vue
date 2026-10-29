@@ -205,13 +205,12 @@ onBeforeUnmount(() => {
               <th>{{ tr('Vehicle Brand', 'ماركة السيارة') }}</th>
               <th>{{ tr('Vehicle Name', 'اسم السيارة') }}</th>
               <th>{{ tr('Vehicle Model', 'سنة الموديل') }}</th>
-              <th>{{ tr('Pricing', 'التسعير') }}</th>
               <th>{{ tr('Action', 'الإجراء') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="busy">
-              <td colspan="7" class="center">{{ tr('Loading...', 'جاري التحميل...') }}</td>
+              <td colspan="6" class="center">{{ tr('Loading...', 'جاري التحميل...') }}</td>
             </tr>
             <tr v-for="row in busy ? [] : rows" :key="row.base_price_id">
               <td>{{ row.base_price_id }}</td>
@@ -227,18 +226,13 @@ onBeforeUnmount(() => {
               <td>{{ row.model?.name || '—' }}</td>
               <td>{{ row.model_year }}</td>
               <td>
-                {{
-                  row.customized ? tr('Customized', 'مخصص') : tr('Base pricing', 'السعر الأساسي')
-                }}
-              </td>
-              <td>
                 <button class="action" @click="edit(row)">
                   ✎ {{ row.customized ? tr('Edit', 'تعديل') : tr('Customize', 'تخصيص') }}
                 </button>
               </td>
             </tr>
             <tr v-if="!busy && !error && !rows.length">
-              <td colspan="7" class="center">{{ tr('No records found', 'لا توجد سجلات') }}</td>
+              <td colspan="6" class="center">{{ tr('No records found', 'لا توجد سجلات') }}</td>
             </tr>
           </tbody>
         </table>
