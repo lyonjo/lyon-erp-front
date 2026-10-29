@@ -161,7 +161,7 @@ onMounted(load)
           <tr v-for="row in visible" :key="row.id">
             <td>{{ row.id }}</td>
             <td>{{ row.destination_branch?.name }}</td>
-            <td>{{ Number(row.price).toFixed(2) }}</td>
+            <td>{{ Math.round(Number(row.price)) }}</td>
             <td>
               <button class="link" @click="edit(row)">{{ tr('Edit', 'تعديل') }}</button
               ><button class="link danger" @click="remove(row)">{{ tr('Delete', 'حذف') }}</button>
