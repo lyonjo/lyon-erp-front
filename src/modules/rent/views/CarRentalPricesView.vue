@@ -191,7 +191,21 @@ function nextPage() {
             <td class="actions">
               <button @click="goView(r)">◉ {{ tr('View', 'عرض') }}</button
               ><button @click="goEdit(r)">✎ {{ tr('Edit', 'تعديل') }}</button
-              ><button class="danger" @click="openDelete(r)">▤ {{ tr('Delete', 'حذف') }}</button>
+              ><button class="danger" @click="openDelete(r)">
+                <svg
+                  class="trash-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 6h18M8 6V4h8v2M5 6l1 14h12l1-14M10 10v7M14 10v7" />
+                </svg>
+                {{ tr('Delete', 'حذف') }}
+              </button>
             </td>
           </tr>
           <tr v-if="!loading && !error && !rows.length">
@@ -500,5 +514,14 @@ tr:last-child td {
     grid-row: 2;
     justify-self: end;
   }
+}
+</style>
+
+<style scoped>
+.trash-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  margin-inline-end: 3px;
 }
 </style>

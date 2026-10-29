@@ -36,6 +36,24 @@ const filteredOptions = computed(() =>
       .includes(search.value.toLowerCase()),
   ),
 )
+const mainPreview = ref(''),
+  galleryPreviews = ref([])
+function releaseMainPreview() {
+  if (mainPreview.value) {
+    URL.revokeObjectURL(mainPreview.value)
+    mainPreview.value = ''
+  }
+}
+function clearGalleryPreviews() {
+  galleryPreviews.value.forEach((item) => URL.revokeObjectURL(item.url))
+  galleryPreviews.value = []
+}
+function removeNewGallery(index) {
+  const item = galleryPreviews.value[index]
+  if (item) URL.revokeObjectURL(item.url)
+  galleryPreviews.value.splice(index, 1)
+  galleryFiles.value.splice(index, 1)
+}
 const imageBlobs = ref({})
 const imageUrl = (image) => imageBlobs.value[image.id] || ''
 async function loadImage(image) {
@@ -47,12 +65,15 @@ async function loadImage(image) {
     imageBlobs.value[image.id] = URL.createObjectURL(data)
   } catch (e) {}
 }
-onBeforeUnmount(() => Object.values(imageBlobs.value).forEach(URL.revokeObjectURL))
+onBeforeUnmount(() => {
+  Object.values(imageBlobs.value).forEach(URL.revokeObjectURL)
+  releaseMainPreview()
+  clearGalleryPreviews()
+})
 function label(o) {
   return `${o.brand_name} ${o.model_name} ${o.model_year}`
 }
 function pick(o) {
-  if (isEdit.value) return
   selected.value = o
   search.value = label(o)
   open.value = false
@@ -75,10 +96,21 @@ function removeImage(image) {
   if (mainImage.value?.id === image.id) mainImage.value = null
 }
 function onMain(e) {
-  mainFile.value = e.target.files?.[0] || null
+  const file = e.target.files?.[0]
+  if (!file) return
+  releaseMainPreview()
+  mainFile.value = file
+  mainPreview.value = URL.createObjectURL(file)
+  e.target.value = ''
+}
+function removeNewMain() {
+  mainFile.value = null
+  releaseMainPreview()
 }
 function onGallery(e) {
-  galleryFiles.value = [...galleryFiles.value, ...Array.from(e.target.files || [])]
+  const files = Array.from(e.target.files || [])
+  galleryFiles.value.push(...files)
+  galleryPreviews.value.push(...files.map((file) => ({ file, url: URL.createObjectURL(file) })))
   e.target.value = ''
 }
 async function init() {
@@ -207,12 +239,12 @@ async function save() {
       <div class="vehicle-picker">
         <input
           v-model="search"
-          :disabled="readOnly || isEdit"
+          :disabled="readOnly"
           :placeholder="tr('Search brand, model, year...', 'بحث بالماركة أو الموديل أو السنة...')"
           @focus="open = true"
           @input="open = true"
-        /><button type="button" :disabled="readOnly || isEdit" @click="open = !open">⌄</button>
-        <div v-if="open && !readOnly && !isEdit" class="options">
+        /><button type="button" :disabled="readOnly" @click="open = !open">⌄</button>
+        <div v-if="open && !readOnly" class="options">
           <button
             v-for="(o, i) in filteredOptions"
             :key="`${o.brand_id}-${o.model_id}-${o.model_year}-${i}`"
@@ -301,7 +333,18 @@ async function save() {
                   :title="tr('Remove interval', 'حذف الفترة')"
                   @click="dropInterval(p, j)"
                 >
-                  ▤
+                  <svg
+                    class="trash-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 6h18M8 6V4h8v2M5 6l1 14h12l1-14M10 10v7M14 10v7" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -316,54 +359,90 @@ async function save() {
         <div v-else class="images-panel">
           <div class="field">
             <label>{{ tr('Main Image', 'الصورة الرئيسية') }}</label>
-            <div
-              v-if="mainImage && !deletedIds.includes(mainImage.id) && imageUrl(mainImage)"
-              class="picture"
-            >
-              <img :src="imageUrl(mainImage)" alt="Main image" /><button
-                v-if="!readOnly"
-                @click="removeImage(mainImage)"
+            <div class="upload-zone main-zone">
+              <div
+                v-if="
+                  mainPreview ||
+                  (mainImage && !deletedIds.includes(mainImage.id) && imageUrl(mainImage))
+                "
+                class="picture main-picture"
               >
-                ✕
-              </button>
+                <img
+                  :src="mainPreview || imageUrl(mainImage)"
+                  :alt="tr('Main Image', 'الصورة الرئيسية')"
+                />
+                <button
+                  v-if="!readOnly"
+                  type="button"
+                  class="remove-image"
+                  :aria-label="tr('Remove main image', 'حذف الصورة الرئيسية')"
+                  @click="mainPreview ? removeNewMain() : removeImage(mainImage)"
+                >
+                  ×
+                </button>
+              </div>
+              <label v-if="!readOnly" class="upload-trigger"
+                ><strong>{{
+                  mainPreview || mainImage
+                    ? tr('Change main image', 'تغيير الصورة الرئيسية')
+                    : tr('Click to upload', 'اضغط للرفع')
+                }}</strong
+                ><small>JPG, PNG, WEBP · 5MB max</small
+                ><input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  hidden
+                  @change="onMain"
+              /></label>
+              <span v-else-if="!mainImage" class="empty-images">{{
+                tr('No main image', 'لا توجد صورة رئيسية')
+              }}</span>
             </div>
-            <label v-if="!readOnly" class="upload"
-              >↑<strong>{{ tr('Click to upload', 'اضغط للرفع') }}</strong
-              ><small>JPG, PNG, WEBP · 5MB max</small
-              ><input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                hidden
-                @change="onMain" /></label
-            ><span v-if="mainFile">{{ mainFile.name }}</span>
           </div>
           <div class="field">
             <label>{{ tr('Gallery Images', 'صور المعرض') }}</label>
-            <div class="gallery">
-              <div v-for="image in oldImages" :key="image.id" class="picture">
-                <img :src="imageUrl(image)" alt="Gallery image" /><button
-                  v-if="!readOnly"
-                  @click="removeImage(image)"
-                >
-                  ✕
-                </button>
+            <div class="upload-zone gallery-zone">
+              <div v-if="oldImages.length || galleryPreviews.length" class="gallery">
+                <div v-for="image in oldImages" :key="'stored-' + image.id" class="picture">
+                  <img
+                    v-if="imageUrl(image)"
+                    :src="imageUrl(image)"
+                    :alt="tr('Gallery image', 'صورة المعرض')"
+                  /><button
+                    v-if="!readOnly"
+                    type="button"
+                    class="remove-image"
+                    :aria-label="tr('Remove gallery image', 'حذف صورة المعرض')"
+                    @click="removeImage(image)"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div v-for="(item, index) in galleryPreviews" :key="item.url" class="picture">
+                  <img :src="item.url" :alt="item.file.name" /><button
+                    v-if="!readOnly"
+                    type="button"
+                    class="remove-image"
+                    :aria-label="tr('Remove gallery image', 'حذف صورة المعرض')"
+                    @click="removeNewGallery(index)"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
-            </div>
-            <label v-if="!readOnly" class="upload"
-              >↑<strong>{{ tr('Click to upload', 'اضغط للرفع') }}</strong
-              ><small>JPG, PNG, WEBP · 5MB each</small
-              ><input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                hidden
-                @change="onGallery"
-            /></label>
-            <div v-for="f in galleryFiles" :key="f.name">
-              {{ f.name }}
-              <button v-if="!readOnly" @click="galleryFiles = galleryFiles.filter((x) => x !== f)">
-                ✕
-              </button>
+              <label v-if="!readOnly" class="upload-trigger"
+                ><strong>{{ tr('Click to upload', 'اضغط للرفع') }}</strong
+                ><small>JPG, PNG, WEBP · 5MB each</small
+                ><input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  hidden
+                  @change="onGallery"
+              /></label>
+              <span v-else-if="!oldImages.length" class="empty-images">{{
+                tr('No gallery images', 'لا توجد صور للمعرض')
+              }}</span>
             </div>
           </div>
         </div>
@@ -427,18 +506,6 @@ async function save() {
   border-radius: 13px;
   height: 32px;
   margin-bottom: 22px;
-}
-.vehicle-picker input:disabled {
-  background: #f3f4f6;
-  color: #64748b;
-  cursor: not-allowed;
-}
-.vehicle-picker > button:disabled {
-  background: #f3f4f6;
-  cursor: not-allowed;
-}
-.vehicle-picker:has(input:disabled) {
-  background: #f3f4f6;
 }
 .vehicle-picker input {
   border: 0;
@@ -673,5 +740,86 @@ async function save() {
   .header h2 {
     font-size: 20px;
   }
+}
+</style>
+
+<style scoped>
+.images-panel .upload-zone {
+  box-sizing: border-box;
+  border: 1px dashed #8ca2bc;
+  border-radius: 8px;
+  min-height: 145px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: #fff;
+}
+.images-panel .main-picture {
+  margin: 0;
+  display: block;
+}
+.images-panel .main-picture img {
+  width: 170px;
+  height: 124px;
+  object-fit: contain;
+}
+.images-panel .gallery-zone .gallery {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+}
+.images-panel .gallery-zone .picture {
+  margin: 0;
+}
+.images-panel .gallery-zone .picture img {
+  display: block;
+  width: 110px;
+  height: 82px;
+  object-fit: cover;
+}
+.images-panel .upload-trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  text-align: center;
+  color: #215da2;
+}
+.images-panel .upload-trigger strong {
+  font-size: 13px;
+}
+.images-panel .upload-trigger small {
+  font-size: 11px;
+  color: #8795a6;
+}
+.images-panel .remove-image {
+  position: absolute;
+  right: -7px;
+  top: -7px;
+  border-radius: 50%;
+  width: 23px;
+  height: 23px;
+  background: #fff;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  color: #c23b4b;
+  font-size: 18px;
+  line-height: 18px;
+}
+.images-panel .empty-images {
+  font-size: 12px;
+  color: #8795a6;
+}
+.trash-icon {
+  width: 17px;
+  height: 17px;
+  vertical-align: middle;
 }
 </style>
