@@ -51,6 +51,7 @@ const infoRows = computed(() => [
   ['Phone', [c.value?.country_code, c.value?.phone_number].filter(Boolean).join(' ')],
   ['Client Side', c.value?.client_side_label ?? c.value?.client_side],
   ['Address', c.value?.address],
+  ['Note', c.value?.note],
 ])
 const nationalityRows = computed(() => [
   ['Nationality', d.value.nationality],

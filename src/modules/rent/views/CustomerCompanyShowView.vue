@@ -81,6 +81,7 @@ watch(
           v-for="[label, value] in [
             ['Email', company.email],
             ['Admin Name', company.admin_name],
+            ['Note', company.note],
             ['Phone', [company.country_code, company.phone].filter(Boolean).join(' ')],
             ['Address', company.address],
             ['Black List', tr(company.is_blacklist ? 'Yes' : 'No')],

@@ -229,10 +229,7 @@ function submit() {
   emit('submit', buildPayload())
 }
 
-const back = () =>
-  router.push(
-    isEdit.value && props.customer ? `/rent/customers/${props.customer.id}` : '/rent/customers',
-  )
+const back = () => router.push('/rent/customers')
 </script>
 
 <template>

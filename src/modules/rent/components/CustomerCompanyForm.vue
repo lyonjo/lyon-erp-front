@@ -135,12 +135,7 @@ function submit() {
     removedAttachmentIds: [...removedAttachmentIds.value],
   })
 }
-const back = () =>
-  router.push(
-    isEdit.value && props.company
-      ? `/rent/customer-companies/${props.company.id}`
-      : '/rent/customer-companies',
-  )
+const back = () => router.push('/rent/customer-companies')
 </script>
 <template>
   <div class="page">
