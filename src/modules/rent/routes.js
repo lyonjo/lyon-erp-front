@@ -34,6 +34,8 @@ const pages = {
   '/rent/refunds': () => import('./views/RefundListView.vue'),
   '/rent/discounts': () => import('./views/DiscountListView.vue'),
   '/rent/gasoline': () => import('./views/GasolineListView.vue'),
+  '/rent/branches/:id/edit': () => import('./views/BranchEditView.vue'),
+  '/rent/branches/:id/view': () => import('./views/BranchShowView.vue'),
 }
 
 const children = [
@@ -234,6 +236,8 @@ const children = [
     path: 'branches/:id/destinations',
     component: () => import('./views/BranchDestinationsView.vue'),
   },
+  { path: 'branches/:id/edit', component: () => import('./views/BranchEditView.vue') },
+  { path: 'branches/:id/view', component: () => import('./views/BranchShowView.vue') },
 ]
 
 export default {

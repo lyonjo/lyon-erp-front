@@ -18,6 +18,7 @@ const labels = {
     address: 'Address',
     actions: 'Actions',
     edit: 'Edit',
+    view: 'View',
     destinations: 'Destinations',
     remove: 'Delete',
     empty: 'No branches found',
@@ -52,6 +53,7 @@ const labels = {
     address: 'العنوان',
     actions: 'الإجراءات',
     edit: 'تعديل',
+    view: 'عرض',
     destinations: 'الوجهات',
     remove: 'حذف',
     empty: 'لا توجد فروع',
@@ -95,12 +97,10 @@ const pagerItems = computed(() => {
   const total = Math.max(1, Number(meta.value.last_page) || 1)
   const current = Math.min(total, Math.max(1, page.value))
   const keep = new Set([1, total])
-  for (let index = Math.max(1, current - 1); index <= Math.min(total, current + 1); index++)
-    keep.add(index)
+  for (let index = Math.max(1, current - 1); index <= Math.min(total, current + 1); index++) keep.add(index)
   // Keep the first and last few pages visible to avoid a lone ellipsis.
   if (current <= 3) for (let index = 1; index <= Math.min(total, 4); index++) keep.add(index)
-  if (current >= total - 2)
-    for (let index = Math.max(1, total - 3); index <= total; index++) keep.add(index)
+  if (current >= total - 2) for (let index = Math.max(1, total - 3); index <= total; index++) keep.add(index)
   const pages = [...keep].sort((a, b) => a - b)
   const items = []
   pages.forEach((number, index) => {
@@ -266,14 +266,8 @@ async function remove(branch) {
             <td class="address-cell" dir="auto">{{ branch.address }}</td>
             <td>
               <div class="row-actions">
-                <button
-                  type="button"
-                  class="destination-action"
-                  @click="router.push(`/rent/branches/${branch.id}/destinations`)"
-                >
-                  {{ tr('destinations') }}
-                </button>
-                <button type="button" :disabled="deletingId !== null" @click="showModal(branch)">
+                <button type="button" @click="router.push(`/rent/branches/${branch.id}/view`)">{{ tr('view') }}</button>
+                <button type="button" :disabled="deletingId !== null" @click="router.push(`/rent/branches/${branch.id}/edit`)">
                   {{ tr('edit') }}
                 </button>
                 <button
@@ -298,38 +292,12 @@ async function remove(branch) {
     </div>
 
     <nav class="pagination" dir="ltr" :aria-label="isAr ? 'صفحات الفروع' : 'Branch pages'">
-      <button
-        type="button"
-        class="page-arrow"
-        :aria-label="tr('prev')"
-        :disabled="loading || page <= 1"
-        @click="goToPage(page - 1)"
-      >
-        ‹
-      </button>
+      <button type="button" class="page-arrow" :aria-label="tr('prev')" :disabled="loading || page <= 1" @click="goToPage(page - 1)">‹</button>
       <template v-for="item in pagerItems" :key="item">
         <span v-if="typeof item === 'string'" class="page-ellipsis">…</span>
-        <button
-          v-else
-          type="button"
-          class="page-number"
-          :class="{ active: page === item }"
-          :aria-current="page === item ? 'page' : undefined"
-          :disabled="loading"
-          @click="goToPage(item)"
-        >
-          {{ item }}
-        </button>
+        <button v-else type="button" class="page-number" :class="{ active: page === item }" :aria-current="page === item ? 'page' : undefined" :disabled="loading" @click="goToPage(item)">{{ item }}</button>
       </template>
-      <button
-        type="button"
-        class="page-arrow"
-        :aria-label="tr('next')"
-        :disabled="loading || page >= meta.last_page"
-        @click="goToPage(page + 1)"
-      >
-        ›
-      </button>
+      <button type="button" class="page-arrow" :aria-label="tr('next')" :disabled="loading || page >= meta.last_page" @click="goToPage(page + 1)">›</button>
     </nav>
 
     <div v-if="open" class="backdrop" @click.self="closeModal" @keydown.esc="closeModal">
@@ -423,15 +391,9 @@ async function remove(branch) {
   margin: 0 0 22px;
   direction: ltr;
 }
-.filters > input {
-  justify-self: start;
-}
-.filters > .per-page {
-  justify-self: center;
-}
-.filters > .new-button {
-  justify-self: end;
-}
+.filters > input { justify-self: start; }
+.filters > .per-page { justify-self: center; }
+.filters > .new-button { justify-self: end; }
 .filters input,
 .filters select {
   height: 38px;
@@ -554,31 +516,13 @@ tbody tr:last-child td {
   background: #3983ef;
   border-color: #3983ef;
 }
-.pagination button:disabled:not(.active) {
-  opacity: 0.45;
-  cursor: default;
-}
-.page-ellipsis {
-  color: #64748b;
-  padding: 0 5px;
-}
+.pagination button:disabled:not(.active) { opacity: .45; cursor: default; }
+.page-ellipsis { color: #64748b; padding: 0 5px; }
 @media (max-width: 600px) {
-  .filters {
-    grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: 12px;
-  }
-  .filters > input {
-    grid-column: 1 / -1;
-    width: 100%;
-  }
-  .filters > .per-page {
-    grid-column: 1;
-    justify-self: start;
-  }
-  .filters > .new-button {
-    grid-column: 2;
-    justify-self: end;
-  }
+  .filters { grid-template-columns: minmax(0, 1fr) auto; row-gap: 12px; }
+  .filters > input { grid-column: 1 / -1; width: 100%; }
+  .filters > .per-page { grid-column: 1; justify-self: start; }
+  .filters > .new-button { grid-column: 2; justify-self: end; }
 }
 .error {
   display: flex;
