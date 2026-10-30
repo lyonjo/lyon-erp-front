@@ -194,8 +194,6 @@ const branchDestinations = ref([])
 const destinationOptions = ref([])
 const destinationsLoading = ref(false)
 const destinationSearch = ref('')
-const destinationPageSize = ref(50)
-const destinationPage = ref(1)
 const filteredDestinations = computed(() =>
   branchDestinations.value.filter(
     (row) =>
@@ -203,15 +201,6 @@ const filteredDestinations = computed(() =>
         .toLowerCase()
         .includes(destinationSearch.value.toLowerCase()) ||
       String(row.id).includes(destinationSearch.value),
-  ),
-)
-const destinationPages = computed(() =>
-  Math.max(1, Math.ceil(filteredDestinations.value.length / destinationPageSize.value)),
-)
-const visibleDestinations = computed(() =>
-  filteredDestinations.value.slice(
-    (destinationPage.value - 1) * destinationPageSize.value,
-    destinationPage.value * destinationPageSize.value,
   ),
 )
 const destinationDialog = ref(false)
@@ -256,7 +245,6 @@ async function fetchDestinations(branchId) {
     if (!open.value || selected.value?.id !== branchId) return
     branchDestinations.value = list.data.data ?? []
     destinationOptions.value = options.data.data ?? []
-    destinationPage.value = Math.min(destinationPage.value, destinationPages.value)
   } catch (e) {
     formError.value = e.response?.data?.message || tr('destLoadError')
   } finally {
@@ -267,7 +255,6 @@ async function reloadDestinations() {
   if (!selected.value) return
   const { data } = await api.get(`/rent/branches/${selected.value.id}/destinations`)
   branchDestinations.value = data.data ?? []
-  destinationPage.value = Math.min(destinationPage.value, destinationPages.value)
 }
 async function showModal(branch = null, mode = 'create') {
   modalMode.value = mode
@@ -276,7 +263,6 @@ async function showModal(branch = null, mode = 'create') {
   fieldErrors.value = {}
   formError.value = ''
   destinationSearch.value = ''
-  destinationPage.value = 1
   branchDestinations.value = []
   destinationOptions.value = []
   open.value = true
@@ -569,17 +555,7 @@ async function remove() {
           <section v-if="selected" class="destinations-inside">
             <h3>{{ tr('branchDestinations') }}</h3>
             <div class="destination-toolbar">
-              <input
-                v-model="destinationSearch"
-                type="search"
-                :placeholder="tr('destSearch')"
-                @input="destinationPage = 1"
-              />
-              <select v-model.number="destinationPageSize" @change="destinationPage = 1">
-                <option v-for="size in [10, 25, 50, 100]" :key="size" :value="size">
-                  {{ size }} {{ tr('perPage') }}
-                </option>
-              </select>
+              <input v-model="destinationSearch" type="search" :placeholder="tr('destSearch')" />
               <button
                 v-if="modalMode === 'edit'"
                 type="button"
@@ -600,7 +576,7 @@ async function remove() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in visibleDestinations" :key="row.id">
+                  <tr v-for="row in filteredDestinations" :key="row.id">
                     <td>{{ row.id }}</td>
                     <td>{{ row.destination_branch?.name || '—' }}</td>
                     <td>{{ displayPrice(row.price) }}</td>
@@ -617,7 +593,7 @@ async function remove() {
                       </div>
                     </td>
                   </tr>
-                  <tr v-if="!destinationsLoading && !visibleDestinations.length">
+                  <tr v-if="!destinationsLoading && !filteredDestinations.length">
                     <td :colspan="modalMode === 'edit' ? 4 : 3">{{ tr('noneDestinations') }}</td>
                   </tr>
                   <tr v-if="destinationsLoading">
@@ -626,27 +602,6 @@ async function remove() {
                 </tbody>
               </table>
             </div>
-            <nav class="pagination destination-pagination" dir="ltr">
-              <button type="button" :disabled="destinationPage <= 1" @click="destinationPage--">
-                ‹
-              </button>
-              <button
-                v-for="num in destinationPages"
-                :key="num"
-                type="button"
-                :class="{ active: destinationPage === num }"
-                @click="destinationPage = num"
-              >
-                {{ num }}
-              </button>
-              <button
-                type="button"
-                :disabled="destinationPage >= destinationPages"
-                @click="destinationPage++"
-              >
-                ›
-              </button>
-            </nav>
           </section>
           <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
           <div class="form-actions">
@@ -1106,8 +1061,8 @@ tbody tr:last-child td {
 <style scoped>
 /* Branch detail and destination CRUD are all contained within the table page. */
 .dialog:has(.destinations-inside) {
-  width: min(1000px, calc(100vw - 36px));
-  max-height: 90vh;
+  width: min(1180px, calc(100vw - 36px));
+  max-height: 92vh;
   overflow-y: auto;
   box-sizing: border-box;
 }
@@ -1121,10 +1076,10 @@ tbody tr:last-child td {
   font-size: 17px;
 }
 .destination-toolbar {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 12px;
   direction: ltr;
   margin-bottom: 14px;
 }
@@ -1133,11 +1088,9 @@ tbody tr:last-child td {
   width: min(100%, 260px);
   min-width: 0;
 }
-.destination-toolbar select {
-  justify-self: center;
-}
 .destination-toolbar .new-button {
-  justify-self: end;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .destination-toolbar input,
 .destination-toolbar select,
@@ -1154,11 +1107,8 @@ tbody tr:last-child td {
   border-radius: 10px;
   overflow-x: auto;
 }
-.destination-pagination {
-  margin-top: 14px;
-}
 .overlay-top {
-  z-index: 2200;
+  z-index: 4000;
 }
 .destination-editor {
   width: min(460px, calc(100vw - 36px));
@@ -1178,12 +1128,10 @@ tbody tr:last-child td {
 }
 @media (max-width: 650px) {
   .destination-toolbar {
-    grid-template-columns: 1fr;
+    flex-wrap: wrap;
   }
   .destination-toolbar input,
-  .destination-toolbar select,
   .destination-toolbar .new-button {
-    justify-self: stretch;
     width: 100%;
   }
   .dialog:has(.destinations-inside) {
