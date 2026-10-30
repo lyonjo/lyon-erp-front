@@ -193,16 +193,6 @@ const modalMode = ref('create')
 const branchDestinations = ref([])
 const destinationOptions = ref([])
 const destinationsLoading = ref(false)
-const destinationSearch = ref('')
-const filteredDestinations = computed(() =>
-  branchDestinations.value.filter(
-    (row) =>
-      (row.destination_branch?.name || '')
-        .toLowerCase()
-        .includes(destinationSearch.value.toLowerCase()) ||
-      String(row.id).includes(destinationSearch.value),
-  ),
-)
 const destinationDialog = ref(false)
 const editingDestination = ref(null)
 const destinationBranchId = ref('')
@@ -262,7 +252,6 @@ async function showModal(branch = null, mode = 'create') {
   branchName.value = branch?.name ?? ''
   fieldErrors.value = {}
   formError.value = ''
-  destinationSearch.value = ''
   branchDestinations.value = []
   destinationOptions.value = []
   open.value = true
@@ -555,7 +544,6 @@ async function remove() {
           <section v-if="selected" class="destinations-inside">
             <h3>{{ tr('branchDestinations') }}</h3>
             <div class="destination-toolbar">
-              <input v-model="destinationSearch" type="search" :placeholder="tr('destSearch')" />
               <button
                 v-if="modalMode === 'edit'"
                 type="button"
@@ -576,7 +564,7 @@ async function remove() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in filteredDestinations" :key="row.id">
+                  <tr v-for="row in branchDestinations" :key="row.id">
                     <td>{{ row.id }}</td>
                     <td>{{ row.destination_branch?.name || '—' }}</td>
                     <td>{{ displayPrice(row.price) }}</td>
@@ -593,7 +581,7 @@ async function remove() {
                       </div>
                     </td>
                   </tr>
-                  <tr v-if="!destinationsLoading && !filteredDestinations.length">
+                  <tr v-if="!destinationsLoading && !branchDestinations.length">
                     <td :colspan="modalMode === 'edit' ? 4 : 3">{{ tr('noneDestinations') }}</td>
                   </tr>
                   <tr v-if="destinationsLoading">
@@ -604,7 +592,7 @@ async function remove() {
             </div>
           </section>
           <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
-          <div class="form-actions">
+          <div class="form-actions branch-modal-actions">
             <button type="button" class="cancel" :disabled="saving" @click="closeModal">
               {{ tr('cancel') }}
             </button>
@@ -1136,6 +1124,35 @@ tbody tr:last-child td {
   }
   .dialog:has(.destinations-inside) {
     max-height: 94vh;
+  }
+}
+</style>
+
+<style scoped>
+/* Compact actions in the branch create/edit/view modal only. */
+.branch-modal-actions {
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.branch-modal-actions .cancel,
+.branch-modal-actions .submit {
+  flex: 0 0 auto;
+  min-width: 100px;
+  width: auto;
+  height: 38px;
+  padding: 0 20px;
+}
+.destination-toolbar {
+  justify-content: flex-end;
+}
+@media (max-width: 650px) {
+  .branch-modal-actions .cancel,
+  .branch-modal-actions .submit {
+    min-width: 90px;
+  }
+  .destination-toolbar .new-button {
+    width: auto;
   }
 }
 </style>
