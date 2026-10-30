@@ -2,9 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
-import { useRouter } from 'vue-router'
 
-const router = useRouter()
 const { locale } = useI18n({ useScope: 'global' })
 const isAr = computed(() => locale.value.toLowerCase().startsWith('ar'))
 const labels = {
@@ -40,6 +38,24 @@ const labels = {
     confirm: 'Delete branch "{name}"? This cannot be undone.',
     deleting: 'Deleting...',
     close: 'Close',
+    viewTitle: 'View Branch',
+    branchInfo: 'Branch Information',
+    branchDestinations: 'Branch Destinations',
+    addDestination: '+ Add Destination',
+    destBranch: 'Destination Branch',
+    destPrice: 'Price',
+    noneDestinations: 'No destinations configured.',
+    destSearch: 'Search destinations...',
+    destSelect: 'Select destination branch',
+    destCreate: 'New Destination',
+    destEdit: 'Edit Destination',
+    destDelete: 'Delete Destination',
+    destConfirm: 'Delete destination "{name}"? This cannot be undone.',
+    destSaveError: 'Could not save destination.',
+    destLoadError: 'Could not load branch destinations.',
+    destDeleteError: 'Could not delete destination.',
+    destRequired: 'Choose a destination and enter a valid price.',
+    editBranch: 'Edit Branch',
   },
   ar: {
     title: 'فروعي',
@@ -73,6 +89,24 @@ const labels = {
     confirm: 'هل تريد حذف الفرع "{name}"؟ لا يمكن التراجع عن الحذف.',
     deleting: 'جارٍ الحذف...',
     close: 'إغلاق',
+    viewTitle: 'عرض الفرع',
+    branchInfo: 'معلومات الفرع',
+    branchDestinations: 'وجهات الفرع',
+    addDestination: '+ إضافة وجهة',
+    destBranch: 'الفرع الوجهة',
+    destPrice: 'السعر',
+    noneDestinations: 'لا توجد وجهات.',
+    destSearch: 'بحث عن وجهة...',
+    destSelect: 'اختر فرع الوجهة',
+    destCreate: 'إضافة وجهة',
+    destEdit: 'تعديل الوجهة',
+    destDelete: 'حذف الوجهة',
+    destConfirm: 'هل تريد حذف الوجهة "{name}"؟ لا يمكن التراجع عن الحذف.',
+    destSaveError: 'تعذر حفظ الوجهة.',
+    destLoadError: 'تعذر تحميل الوجهات.',
+    destDeleteError: 'تعذر حذف الوجهة.',
+    destRequired: 'اختر وجهة وسعراً صحيحاً.',
+    editBranch: 'تعديل الفرع',
   },
 }
 const tr = (key, args = {}) => {
@@ -155,6 +189,43 @@ onBeforeUnmount(() => {
 })
 
 const open = ref(false)
+const modalMode = ref('create')
+const branchDestinations = ref([])
+const destinationOptions = ref([])
+const destinationsLoading = ref(false)
+const destinationSearch = ref('')
+const destinationPageSize = ref(50)
+const destinationPage = ref(1)
+const filteredDestinations = computed(() =>
+  branchDestinations.value.filter(
+    (row) =>
+      (row.destination_branch?.name || '')
+        .toLowerCase()
+        .includes(destinationSearch.value.toLowerCase()) ||
+      String(row.id).includes(destinationSearch.value),
+  ),
+)
+const destinationPages = computed(() =>
+  Math.max(1, Math.ceil(filteredDestinations.value.length / destinationPageSize.value)),
+)
+const visibleDestinations = computed(() =>
+  filteredDestinations.value.slice(
+    (destinationPage.value - 1) * destinationPageSize.value,
+    destinationPage.value * destinationPageSize.value,
+  ),
+)
+const destinationDialog = ref(false)
+const editingDestination = ref(null)
+const destinationBranchId = ref('')
+const destinationPrice = ref('0')
+const destinationError = ref('')
+const destinationSaving = ref(false)
+const destinationDeleteTarget = ref(null)
+const destinationDeleting = ref(false)
+const destinationDeleteError = ref('')
+const displayPrice = (value) =>
+  Number.isFinite(Number(value)) ? String(Math.round(Number(value))) : '—'
+
 const selected = ref(null)
 const branchName = ref('')
 const nameInput = ref(null)
@@ -172,24 +243,122 @@ function cancelDelete() {
 }
 
 watch(open, (value) => {
-  document.body.style.overflow = value ? 'hidden' : ''
+  document.body.style.overflow = value || !!deleteTarget.value ? 'hidden' : ''
 })
 
-async function showModal(branch = null) {
+async function fetchDestinations(branchId) {
+  destinationsLoading.value = true
+  try {
+    const [list, options] = await Promise.all([
+      api.get(`/rent/branches/${branchId}/destinations`),
+      api.get(`/rent/branches/${branchId}/destinations/options`),
+    ])
+    if (!open.value || selected.value?.id !== branchId) return
+    branchDestinations.value = list.data.data ?? []
+    destinationOptions.value = options.data.data ?? []
+    destinationPage.value = Math.min(destinationPage.value, destinationPages.value)
+  } catch (e) {
+    formError.value = e.response?.data?.message || tr('destLoadError')
+  } finally {
+    destinationsLoading.value = false
+  }
+}
+async function reloadDestinations() {
+  if (!selected.value) return
+  const { data } = await api.get(`/rent/branches/${selected.value.id}/destinations`)
+  branchDestinations.value = data.data ?? []
+  destinationPage.value = Math.min(destinationPage.value, destinationPages.value)
+}
+async function showModal(branch = null, mode = 'create') {
+  modalMode.value = mode
   selected.value = branch
   branchName.value = branch?.name ?? ''
   fieldErrors.value = {}
   formError.value = ''
+  destinationSearch.value = ''
+  destinationPage.value = 1
+  branchDestinations.value = []
+  destinationOptions.value = []
   open.value = true
-  await nextTick()
-  nameInput.value?.focus()
+  if (branch) await fetchDestinations(branch.id)
+  else {
+    await nextTick()
+    nameInput.value?.focus()
+  }
 }
 function closeModal() {
-  if (!saving.value) open.value = false
+  if (saving.value || destinationSaving.value || destinationDeleting.value) return
+  destinationDialog.value = false
+  destinationDeleteTarget.value = null
+  open.value = false
+}
+function editDestination(row = null) {
+  if (modalMode.value !== 'edit') return
+  editingDestination.value = row
+  destinationBranchId.value = row ? String(row.destination_branch_id) : ''
+  destinationPrice.value = row ? String(row.price) : '0'
+  destinationError.value = ''
+  destinationDialog.value = true
+}
+async function saveDestination() {
+  if (destinationSaving.value || !selected.value) return
+  destinationError.value = ''
+  if (
+    !destinationBranchId.value ||
+    destinationPrice.value === '' ||
+    !Number.isFinite(Number(destinationPrice.value)) ||
+    Number(destinationPrice.value) < 0
+  ) {
+    destinationError.value = tr('destRequired')
+    return
+  }
+  destinationSaving.value = true
+  try {
+    const prefix = `/rent/branches/${selected.value.id}/destinations`
+    const payload = {
+      destination_branch_id: Number(destinationBranchId.value),
+      price: Number(destinationPrice.value),
+    }
+    if (editingDestination.value) await api.put(`${prefix}/${editingDestination.value.id}`, payload)
+    else await api.post(prefix, payload)
+    destinationDialog.value = false
+    await reloadDestinations()
+  } catch (e) {
+    destinationError.value =
+      Object.values(e.response?.data?.errors ?? {})
+        .flat()
+        .join(' ') ||
+      e.response?.data?.message ||
+      tr('destSaveError')
+  } finally {
+    destinationSaving.value = false
+  }
+}
+function requestDestinationDelete(row) {
+  if (modalMode.value === 'edit' && !destinationDeleting.value) {
+    destinationDeleteError.value = ''
+    destinationDeleteTarget.value = row
+  }
+}
+async function confirmDestinationDelete() {
+  if (!destinationDeleteTarget.value || destinationDeleting.value || !selected.value) return
+  destinationDeleting.value = true
+  destinationDeleteError.value = ''
+  try {
+    await api.delete(
+      `/rent/branches/${selected.value.id}/destinations/${destinationDeleteTarget.value.id}`,
+    )
+    destinationDeleteTarget.value = null
+    await reloadDestinations()
+  } catch (e) {
+    destinationDeleteError.value = e.response?.data?.message || tr('destDeleteError')
+  } finally {
+    destinationDeleting.value = false
+  }
 }
 
 async function submit() {
-  if (saving.value) return
+  if (saving.value || modalMode.value === 'view') return
   formError.value = ''
   fieldErrors.value = {}
   const payload = { name: branchName.value.trim() }
@@ -270,13 +439,11 @@ async function remove() {
             <td class="name-cell" dir="auto">{{ branch.name }}</td>
             <td>
               <div class="row-actions">
-                <button type="button" @click="router.push(`/rent/branches/${branch.id}/view`)">
-                  {{ tr('view') }}
-                </button>
+                <button type="button" @click="showModal(branch, 'view')">{{ tr('view') }}</button>
                 <button
                   type="button"
                   :disabled="deletingId !== null"
-                  @click="router.push(`/rent/branches/${branch.id}/edit`)"
+                  @click="showModal(branch, 'edit')"
                 >
                   {{ tr('edit') }}
                 </button>
@@ -383,7 +550,9 @@ async function remove() {
         >
           ×
         </button>
-        <h2 id="branch-dialog-title">{{ selected ? tr('editTitle') : tr('addTitle') }}</h2>
+        <h2 id="branch-dialog-title">
+          {{ modalMode === 'view' ? tr('viewTitle') : selected ? tr('editTitle') : tr('addTitle') }}
+        </h2>
         <form @submit.prevent="submit">
           <label class="field">
             <span>{{ tr('name') }} <b>*</b></span>
@@ -392,20 +561,180 @@ async function remove() {
               v-model="branchName"
               maxlength="255"
               required
+              :readonly="modalMode === 'view'"
               :placeholder="tr('namePlaceholder')"
             />
             <small v-if="fieldErrors.name" class="field-error">{{ fieldErrors.name[0] }}</small>
           </label>
+          <section v-if="selected" class="destinations-inside">
+            <h3>{{ tr('branchDestinations') }}</h3>
+            <div class="destination-toolbar">
+              <input
+                v-model="destinationSearch"
+                type="search"
+                :placeholder="tr('destSearch')"
+                @input="destinationPage = 1"
+              />
+              <select v-model.number="destinationPageSize" @change="destinationPage = 1">
+                <option v-for="size in [10, 25, 50, 100]" :key="size" :value="size">
+                  {{ size }} {{ tr('perPage') }}
+                </option>
+              </select>
+              <button
+                v-if="modalMode === 'edit'"
+                type="button"
+                class="new-button"
+                @click="editDestination()"
+              >
+                {{ tr('addDestination') }}
+              </button>
+            </div>
+            <div class="destination-table-wrapper">
+              <table class="destination-table">
+                <thead>
+                  <tr>
+                    <th>{{ tr('id') }}</th>
+                    <th>{{ tr('destBranch') }}</th>
+                    <th>{{ tr('destPrice') }}</th>
+                    <th v-if="modalMode === 'edit'">{{ tr('actions') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in visibleDestinations" :key="row.id">
+                    <td>{{ row.id }}</td>
+                    <td>{{ row.destination_branch?.name || '—' }}</td>
+                    <td>{{ displayPrice(row.price) }}</td>
+                    <td v-if="modalMode === 'edit'">
+                      <div class="row-actions">
+                        <button type="button" @click="editDestination(row)">{{ tr('edit') }}</button
+                        ><button
+                          type="button"
+                          class="delete-action"
+                          @click="requestDestinationDelete(row)"
+                        >
+                          {{ tr('remove') }}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="!destinationsLoading && !visibleDestinations.length">
+                    <td :colspan="modalMode === 'edit' ? 4 : 3">{{ tr('noneDestinations') }}</td>
+                  </tr>
+                  <tr v-if="destinationsLoading">
+                    <td :colspan="modalMode === 'edit' ? 4 : 3">{{ tr('loading') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <nav class="pagination destination-pagination" dir="ltr">
+              <button type="button" :disabled="destinationPage <= 1" @click="destinationPage--">
+                ‹
+              </button>
+              <button
+                v-for="num in destinationPages"
+                :key="num"
+                type="button"
+                :class="{ active: destinationPage === num }"
+                @click="destinationPage = num"
+              >
+                {{ num }}
+              </button>
+              <button
+                type="button"
+                :disabled="destinationPage >= destinationPages"
+                @click="destinationPage++"
+              >
+                ›
+              </button>
+            </nav>
+          </section>
           <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
           <div class="form-actions">
             <button type="button" class="cancel" :disabled="saving" @click="closeModal">
               {{ tr('cancel') }}
             </button>
-            <button type="submit" class="submit" :disabled="saving">
+            <button v-if="modalMode !== 'view'" type="submit" class="submit" :disabled="saving">
               {{ saving ? tr('saving') : selected ? tr('save') : tr('add') }}
             </button>
           </div>
         </form>
+      </section>
+    </div>
+    <div
+      v-if="destinationDialog"
+      class="backdrop overlay-top"
+      @click.self="!destinationSaving && (destinationDialog = false)"
+    >
+      <form class="dialog destination-editor" @submit.prevent="saveDestination">
+        <h2>{{ editingDestination ? tr('destEdit') : tr('destCreate') }}</h2>
+        <label class="field"
+          ><span>{{ tr('destBranch') }}</span
+          ><select v-model="destinationBranchId" required>
+            <option value="">{{ tr('destSelect') }}</option>
+            <option v-for="opt in destinationOptions" :key="opt.id" :value="String(opt.id)">
+              {{ opt.name }}
+            </option>
+          </select></label
+        >
+        <label class="field"
+          ><span>{{ tr('destPrice') }}</span
+          ><input
+            v-model="destinationPrice"
+            type="number"
+            min="0"
+            max="9999999999.99"
+            step="0.01"
+            required
+        /></label>
+        <p v-if="destinationError" class="form-error">{{ destinationError }}</p>
+        <div class="form-actions">
+          <button
+            type="button"
+            class="cancel"
+            :disabled="destinationSaving"
+            @click="destinationDialog = false"
+          >
+            {{ tr('cancel') }}</button
+          ><button type="submit" class="submit" :disabled="destinationSaving">
+            {{ destinationSaving ? tr('saving') : tr('save') }}
+          </button>
+        </div>
+      </form>
+    </div>
+    <div
+      v-if="destinationDeleteTarget"
+      class="backdrop overlay-top"
+      @click.self="!destinationDeleting && (destinationDeleteTarget = null)"
+    >
+      <section class="dialog delete-dialog" role="alertdialog" aria-modal="true">
+        <h2>{{ tr('destDelete') }}</h2>
+        <p>
+          {{
+            tr('destConfirm', {
+              name:
+                destinationDeleteTarget.destination_branch?.name ||
+                destinationDeleteTarget.destination_branch_id,
+            })
+          }}
+        </p>
+        <p v-if="destinationDeleteError" class="form-error">{{ destinationDeleteError }}</p>
+        <div class="form-actions">
+          <button
+            type="button"
+            class="cancel"
+            :disabled="destinationDeleting"
+            @click="destinationDeleteTarget = null"
+          >
+            {{ tr('cancel') }}</button
+          ><button
+            type="button"
+            class="confirm-delete"
+            :disabled="destinationDeleting"
+            @click="confirmDestinationDelete"
+          >
+            {{ destinationDeleting ? tr('deleting') : tr('remove') }}
+          </button>
+        </div>
       </section>
     </div>
   </div>
@@ -771,5 +1100,94 @@ tbody tr:last-child td {
 .confirm-delete:disabled {
   opacity: 0.55;
   cursor: default;
+}
+</style>
+
+<style scoped>
+/* Branch detail and destination CRUD are all contained within the table page. */
+.dialog:has(.destinations-inside) {
+  width: min(1000px, calc(100vw - 36px));
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.destinations-inside {
+  margin: 24px 0 18px;
+  border-top: 1px solid #e4e8ef;
+  padding-top: 18px;
+}
+.destinations-inside h3 {
+  margin: 0 0 16px;
+  font-size: 17px;
+}
+.destination-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+  direction: ltr;
+  margin-bottom: 14px;
+}
+.destination-toolbar input {
+  justify-self: start;
+  width: min(100%, 260px);
+  min-width: 0;
+}
+.destination-toolbar select {
+  justify-self: center;
+}
+.destination-toolbar .new-button {
+  justify-self: end;
+}
+.destination-toolbar input,
+.destination-toolbar select,
+.destination-editor select {
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  padding: 9px;
+  background: #fff;
+  color: #34445c;
+  font: inherit;
+}
+.destination-table-wrapper {
+  border: 1px solid #dbe1e8;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.destination-pagination {
+  margin-top: 14px;
+}
+.overlay-top {
+  z-index: 2200;
+}
+.destination-editor {
+  width: min(460px, calc(100vw - 36px));
+  box-sizing: border-box;
+}
+.destination-editor .field {
+  display: block;
+  margin: 14px 0;
+}
+.destination-editor .field span {
+  display: block;
+  margin-bottom: 7px;
+}
+.destination-editor .field select {
+  width: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 650px) {
+  .destination-toolbar {
+    grid-template-columns: 1fr;
+  }
+  .destination-toolbar input,
+  .destination-toolbar select,
+  .destination-toolbar .new-button {
+    justify-self: stretch;
+    width: 100%;
+  }
+  .dialog:has(.destinations-inside) {
+    max-height: 94vh;
+  }
 }
 </style>
