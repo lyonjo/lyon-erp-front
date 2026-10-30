@@ -11,11 +11,10 @@ const labels = {
   en: {
     title: 'My Branches',
     new: '+ Add Branch',
-    search: 'Search by branch name or address...',
+    search: 'Search by branch name...',
     perPage: 'per page',
     id: 'ID',
     name: 'Branch Name',
-    address: 'Address',
     actions: 'Actions',
     edit: 'Edit',
     view: 'View',
@@ -29,7 +28,6 @@ const labels = {
     addTitle: 'Add Branch',
     editTitle: 'Edit Branch',
     namePlaceholder: 'Enter branch name',
-    addressPlaceholder: 'Enter branch address',
     cancel: 'Cancel',
     save: 'Save',
     saving: 'Saving...',
@@ -38,7 +36,7 @@ const labels = {
     loadFailed: 'Could not load branches.',
     saveFailed: 'Could not save branch.',
     deleteFailed: 'Could not delete branch.',
-    required: 'Name and address are required.',
+    required: 'Branch name is required.',
     confirm: 'Delete branch "{name}"? This cannot be undone.',
     deleting: 'Deleting...',
     close: 'Close',
@@ -46,11 +44,10 @@ const labels = {
   ar: {
     title: 'فروعي',
     new: '+ إضافة فرع',
-    search: 'ابحث باسم الفرع أو العنوان...',
+    search: 'ابحث باسم الفرع...',
     perPage: 'لكل صفحة',
     id: 'الرقم',
     name: 'اسم الفرع',
-    address: 'العنوان',
     actions: 'الإجراءات',
     edit: 'تعديل',
     view: 'عرض',
@@ -64,7 +61,6 @@ const labels = {
     addTitle: 'إضافة فرع',
     editTitle: 'تعديل الفرع',
     namePlaceholder: 'أدخل اسم الفرع',
-    addressPlaceholder: 'أدخل عنوان الفرع',
     cancel: 'إلغاء',
     save: 'حفظ',
     saving: 'جارٍ الحفظ...',
@@ -73,7 +69,7 @@ const labels = {
     loadFailed: 'تعذّر تحميل الفروع.',
     saveFailed: 'تعذّر حفظ الفرع.',
     deleteFailed: 'تعذّر حذف الفرع.',
-    required: 'اسم الفرع والعنوان مطلوبان.',
+    required: 'اسم الفرع مطلوب.',
     confirm: 'هل تريد حذف الفرع "{name}"؟ لا يمكن التراجع عن الحذف.',
     deleting: 'جارٍ الحذف...',
     close: 'إغلاق',
@@ -97,10 +93,12 @@ const pagerItems = computed(() => {
   const total = Math.max(1, Number(meta.value.last_page) || 1)
   const current = Math.min(total, Math.max(1, page.value))
   const keep = new Set([1, total])
-  for (let index = Math.max(1, current - 1); index <= Math.min(total, current + 1); index++) keep.add(index)
+  for (let index = Math.max(1, current - 1); index <= Math.min(total, current + 1); index++)
+    keep.add(index)
   // Keep the first and last few pages visible to avoid a lone ellipsis.
   if (current <= 3) for (let index = 1; index <= Math.min(total, 4); index++) keep.add(index)
-  if (current >= total - 2) for (let index = Math.max(1, total - 3); index <= total; index++) keep.add(index)
+  if (current >= total - 2)
+    for (let index = Math.max(1, total - 3); index <= total; index++) keep.add(index)
   const pages = [...keep].sort((a, b) => a - b)
   const items = []
   pages.forEach((number, index) => {
@@ -159,12 +157,19 @@ onBeforeUnmount(() => {
 const open = ref(false)
 const selected = ref(null)
 const branchName = ref('')
-const branchAddress = ref('')
 const nameInput = ref(null)
 const saving = ref(false)
 const formError = ref('')
 const fieldErrors = ref({})
 const deletingId = ref(null)
+const deleteTarget = ref(null)
+function requestDelete(branch) {
+  if (deletingId.value !== null) return
+  deleteTarget.value = branch
+}
+function cancelDelete() {
+  if (deletingId.value === null) deleteTarget.value = null
+}
 
 watch(open, (value) => {
   document.body.style.overflow = value ? 'hidden' : ''
@@ -173,7 +178,6 @@ watch(open, (value) => {
 async function showModal(branch = null) {
   selected.value = branch
   branchName.value = branch?.name ?? ''
-  branchAddress.value = branch?.address ?? ''
   fieldErrors.value = {}
   formError.value = ''
   open.value = true
@@ -188,8 +192,8 @@ async function submit() {
   if (saving.value) return
   formError.value = ''
   fieldErrors.value = {}
-  const payload = { name: branchName.value.trim(), address: branchAddress.value.trim() }
-  if (!payload.name || !payload.address) {
+  const payload = { name: branchName.value.trim() }
+  if (!payload.name) {
     formError.value = tr('required')
     return
   }
@@ -207,12 +211,14 @@ async function submit() {
   }
 }
 
-async function remove(branch) {
-  if (deletingId.value !== null || !window.confirm(tr('confirm', { name: branch.name }))) return
+async function remove() {
+  const branch = deleteTarget.value
+  if (!branch || deletingId.value !== null) return
   deletingId.value = branch.id
   error.value = ''
   try {
     await api.delete(`/rent/branches/${branch.id}`)
+    deleteTarget.value = null
     await load()
   } catch (e) {
     error.value = e.response?.data?.message || tr('deleteFailed')
@@ -255,7 +261,6 @@ async function remove(branch) {
           <tr>
             <th>{{ tr('id') }}</th>
             <th>{{ tr('name') }}</th>
-            <th>{{ tr('address') }}</th>
             <th>{{ tr('actions') }}</th>
           </tr>
         </thead>
@@ -263,18 +268,23 @@ async function remove(branch) {
           <tr v-for="branch in rows" :key="branch.id">
             <td class="id-cell" dir="ltr">{{ branch.id }}</td>
             <td class="name-cell" dir="auto">{{ branch.name }}</td>
-            <td class="address-cell" dir="auto">{{ branch.address }}</td>
             <td>
               <div class="row-actions">
-                <button type="button" @click="router.push(`/rent/branches/${branch.id}/view`)">{{ tr('view') }}</button>
-                <button type="button" :disabled="deletingId !== null" @click="router.push(`/rent/branches/${branch.id}/edit`)">
+                <button type="button" @click="router.push(`/rent/branches/${branch.id}/view`)">
+                  {{ tr('view') }}
+                </button>
+                <button
+                  type="button"
+                  :disabled="deletingId !== null"
+                  @click="router.push(`/rent/branches/${branch.id}/edit`)"
+                >
                   {{ tr('edit') }}
                 </button>
                 <button
                   type="button"
                   class="delete-action"
                   :disabled="deletingId !== null"
-                  @click="remove(branch)"
+                  @click="requestDelete(branch)"
                 >
                   {{ deletingId === branch.id ? tr('deleting') : tr('remove') }}
                 </button>
@@ -282,23 +292,85 @@ async function remove(branch) {
             </td>
           </tr>
           <tr v-if="!loading && !error && rows.length === 0">
-            <td colspan="4" class="empty">{{ tr('empty') }}</td>
+            <td colspan="3" class="empty">{{ tr('empty') }}</td>
           </tr>
           <tr v-if="loading && rows.length === 0">
-            <td colspan="4" class="empty">{{ tr('loading') }}</td>
+            <td colspan="3" class="empty">{{ tr('loading') }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <nav class="pagination" dir="ltr" :aria-label="isAr ? 'صفحات الفروع' : 'Branch pages'">
-      <button type="button" class="page-arrow" :aria-label="tr('prev')" :disabled="loading || page <= 1" @click="goToPage(page - 1)">‹</button>
+      <button
+        type="button"
+        class="page-arrow"
+        :aria-label="tr('prev')"
+        :disabled="loading || page <= 1"
+        @click="goToPage(page - 1)"
+      >
+        ‹
+      </button>
       <template v-for="item in pagerItems" :key="item">
         <span v-if="typeof item === 'string'" class="page-ellipsis">…</span>
-        <button v-else type="button" class="page-number" :class="{ active: page === item }" :aria-current="page === item ? 'page' : undefined" :disabled="loading" @click="goToPage(item)">{{ item }}</button>
+        <button
+          v-else
+          type="button"
+          class="page-number"
+          :class="{ active: page === item }"
+          :aria-current="page === item ? 'page' : undefined"
+          :disabled="loading"
+          @click="goToPage(item)"
+        >
+          {{ item }}
+        </button>
       </template>
-      <button type="button" class="page-arrow" :aria-label="tr('next')" :disabled="loading || page >= meta.last_page" @click="goToPage(page + 1)">›</button>
+      <button
+        type="button"
+        class="page-arrow"
+        :aria-label="tr('next')"
+        :disabled="loading || page >= meta.last_page"
+        @click="goToPage(page + 1)"
+      >
+        ›
+      </button>
     </nav>
+
+    <div
+      v-if="deleteTarget"
+      class="backdrop"
+      @click.self="cancelDelete"
+      @keydown.esc="cancelDelete"
+    >
+      <section
+        class="dialog delete-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="branch-delete-title"
+        aria-describedby="branch-delete-description"
+      >
+        <h2 id="branch-delete-title">{{ tr('remove') }} {{ tr('name') }}</h2>
+        <p id="branch-delete-description">{{ tr('confirm', { name: deleteTarget.name }) }}</p>
+        <div class="form-actions">
+          <button
+            type="button"
+            class="cancel"
+            :disabled="deletingId !== null"
+            @click="cancelDelete"
+          >
+            {{ tr('cancel') }}
+          </button>
+          <button
+            type="button"
+            class="confirm-delete"
+            :disabled="deletingId !== null"
+            @click="remove"
+          >
+            {{ deletingId !== null ? tr('deleting') : tr('remove') }}
+          </button>
+        </div>
+      </section>
+    </div>
 
     <div v-if="open" class="backdrop" @click.self="closeModal" @keydown.esc="closeModal">
       <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="branch-dialog-title">
@@ -323,19 +395,6 @@ async function remove(branch) {
               :placeholder="tr('namePlaceholder')"
             />
             <small v-if="fieldErrors.name" class="field-error">{{ fieldErrors.name[0] }}</small>
-          </label>
-          <label class="field">
-            <span>{{ tr('address') }} <b>*</b></span>
-            <textarea
-              v-model="branchAddress"
-              rows="3"
-              maxlength="1000"
-              required
-              :placeholder="tr('addressPlaceholder')"
-            ></textarea>
-            <small v-if="fieldErrors.address" class="field-error">{{
-              fieldErrors.address[0]
-            }}</small>
           </label>
           <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
           <div class="form-actions">
@@ -391,9 +450,15 @@ async function remove(branch) {
   margin: 0 0 22px;
   direction: ltr;
 }
-.filters > input { justify-self: start; }
-.filters > .per-page { justify-self: center; }
-.filters > .new-button { justify-self: end; }
+.filters > input {
+  justify-self: start;
+}
+.filters > .per-page {
+  justify-self: center;
+}
+.filters > .new-button {
+  justify-self: end;
+}
 .filters input,
 .filters select {
   height: 38px;
@@ -450,10 +515,6 @@ tbody tr:last-child td {
 .name-cell {
   font-weight: 600;
   min-width: 150px;
-}
-.address-cell {
-  min-width: 210px;
-  overflow-wrap: anywhere;
 }
 .id-cell {
   width: 85px;
@@ -516,13 +577,31 @@ tbody tr:last-child td {
   background: #3983ef;
   border-color: #3983ef;
 }
-.pagination button:disabled:not(.active) { opacity: .45; cursor: default; }
-.page-ellipsis { color: #64748b; padding: 0 5px; }
+.pagination button:disabled:not(.active) {
+  opacity: 0.45;
+  cursor: default;
+}
+.page-ellipsis {
+  color: #64748b;
+  padding: 0 5px;
+}
 @media (max-width: 600px) {
-  .filters { grid-template-columns: minmax(0, 1fr) auto; row-gap: 12px; }
-  .filters > input { grid-column: 1 / -1; width: 100%; }
-  .filters > .per-page { grid-column: 1; justify-self: start; }
-  .filters > .new-button { grid-column: 2; justify-self: end; }
+  .filters {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 12px;
+  }
+  .filters > input {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .filters > .per-page {
+    grid-column: 1;
+    justify-self: start;
+  }
+  .filters > .new-button {
+    grid-column: 2;
+    justify-self: end;
+  }
 }
 .error {
   display: flex;
@@ -672,5 +751,25 @@ tbody tr:last-child td {
   .dialog {
     padding: 20px;
   }
+}
+</style>
+
+<style scoped>
+.delete-dialog p {
+  line-height: 1.65;
+  color: #495b72;
+  margin: 8px 0 22px;
+}
+.confirm-delete {
+  border: 0;
+  border-radius: 24px;
+  background: #c43643;
+  color: #fff;
+  padding: 10px 23px;
+  cursor: pointer;
+}
+.confirm-delete:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 </style>
