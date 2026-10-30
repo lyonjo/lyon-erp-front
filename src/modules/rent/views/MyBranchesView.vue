@@ -548,16 +548,18 @@ async function remove() {
             <small v-if="fieldErrors.name" class="field-error">{{ fieldErrors.name[0] }}</small>
           </label>
           <section v-if="selected" class="destinations-inside">
-            <h3>{{ tr('branchDestinations') }}</h3>
-            <div class="destination-toolbar">
-              <button
-                v-if="modalMode === 'edit'"
-                type="button"
-                class="new-button"
-                @click="editDestination()"
-              >
-                {{ tr('addDestination') }}
-              </button>
+            <div class="destination-heading">
+              <h3>{{ tr('branchDestinations') }}</h3>
+              <div class="destination-toolbar">
+                <button
+                  v-if="modalMode === 'edit'"
+                  type="button"
+                  class="new-button"
+                  @click="editDestination()"
+                >
+                  {{ tr('addDestination') }}
+                </button>
+              </div>
             </div>
             <div class="destination-table-wrapper">
               <table class="destination-table">
@@ -1271,6 +1273,45 @@ tbody tr:last-child td {
   .branch-detail-dialog .branch-detail-footer {
     margin-top: 12px;
     padding: 12px 14px;
+  }
+}
+
+/* Keep the heading and action on one row in LTR and RTL. */
+.branch-detail-dialog .destination-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex: 0 0 auto;
+  margin-bottom: 18px;
+  min-width: 0;
+}
+.branch-detail-dialog .destination-heading h3 {
+  margin: 0;
+  flex: 0 1 auto;
+}
+.branch-detail-dialog .destination-heading .destination-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  direction: inherit;
+  margin: 0;
+  min-height: 0;
+  justify-content: flex-end;
+}
+.branch-detail-dialog .destination-heading .new-button {
+  margin: 0;
+}
+/* Use a physical corner: logical inset-inline-end shifted the X in RTL. */
+.branch-detail-dialog > .dismiss {
+  inset-inline-end: auto;
+  left: auto;
+  right: 22px;
+  top: 12px;
+  transform: none;
+}
+@media (max-width: 700px) {
+  .branch-detail-dialog .destination-heading {
+    flex-wrap: wrap;
   }
 }
 </style>
