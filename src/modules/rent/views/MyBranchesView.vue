@@ -515,7 +515,13 @@ async function remove() {
     </div>
 
     <div v-if="open" class="backdrop" @click.self="closeModal" @keydown.esc="closeModal">
-      <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="branch-dialog-title">
+      <section
+        class="dialog"
+        :class="{ 'branch-detail-dialog': !!selected }"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="branch-dialog-title"
+      >
         <button
           type="button"
           class="dismiss"
@@ -528,7 +534,7 @@ async function remove() {
         <h2 id="branch-dialog-title">
           {{ modalMode === 'view' ? tr('viewTitle') : selected ? tr('editTitle') : tr('addTitle') }}
         </h2>
-        <form @submit.prevent="submit">
+        <form class="branch-detail-form" @submit.prevent="submit">
           <label class="field">
             <span>{{ tr('name') }} <b>*</b></span>
             <input
@@ -592,7 +598,10 @@ async function remove() {
             </div>
           </section>
           <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
-          <div class="form-actions branch-modal-actions">
+          <div
+            class="form-actions branch-modal-actions"
+            :class="{ 'branch-detail-footer': !!selected }"
+          >
             <button type="button" class="cancel" :disabled="saving" @click="closeModal">
               {{ tr('cancel') }}
             </button>
@@ -1049,9 +1058,6 @@ tbody tr:last-child td {
 <style scoped>
 /* Branch detail and destination CRUD are all contained within the table page. */
 .dialog:has(.destinations-inside) {
-  width: min(1180px, calc(100vw - 36px));
-  max-height: 92vh;
-  overflow-y: auto;
   box-sizing: border-box;
 }
 .destinations-inside {
@@ -1153,6 +1159,118 @@ tbody tr:last-child td {
   }
   .destination-toolbar .new-button {
     width: auto;
+  }
+}
+</style>
+
+<style scoped>
+/* Full-width Branch View/Edit dialog matching the supplied reference. */
+.branch-detail-dialog {
+  width: min(1480px, calc(100vw - 72px));
+  max-width: none;
+  height: min(930px, calc(100dvh - 72px));
+  max-height: calc(100dvh - 72px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.branch-detail-dialog > h2 {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 30px 72px 22px;
+  font-size: 24px;
+  text-align: center;
+}
+.branch-detail-dialog .dismiss {
+  top: 12px;
+  right: 22px;
+  z-index: 1;
+}
+.branch-detail-form {
+  min-height: 0;
+}
+.branch-detail-dialog .branch-detail-form {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.branch-detail-dialog .branch-detail-form > .field {
+  flex: 0 0 auto;
+  margin: 0 28px;
+}
+.branch-detail-dialog .destinations-inside {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 22px 28px 0;
+  padding-top: 17px;
+}
+.branch-detail-dialog .destinations-inside h3 {
+  margin: 0;
+  font-size: 19px;
+}
+.branch-detail-dialog .destination-toolbar {
+  margin: -32px 0 18px;
+  min-height: 38px;
+}
+.branch-detail-dialog .destination-table-wrapper {
+  flex: 1 1 auto;
+  min-height: 200px;
+  overflow: auto;
+  border: 1px solid #dbe2ec;
+  border-radius: 10px;
+}
+.branch-detail-dialog .destination-table {
+  width: 100%;
+}
+.branch-detail-dialog .destination-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f6f9fc;
+}
+.branch-detail-dialog .branch-detail-footer {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  padding: 16px 27px;
+  margin-top: 22px;
+  border-top: 1px solid #e5eaf0;
+  background: #fff;
+}
+.branch-detail-dialog .branch-detail-footer .cancel,
+.branch-detail-dialog .branch-detail-footer .submit {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 100px;
+  padding: 0 22px;
+  height: 38px;
+}
+@media (max-width: 700px) {
+  .branch-detail-dialog {
+    width: calc(100vw - 24px);
+    height: calc(100dvh - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+  .branch-detail-dialog > h2 {
+    padding: 22px 45px 18px;
+    font-size: 20px;
+  }
+  .branch-detail-dialog .branch-detail-form > .field {
+    margin: 0 14px;
+  }
+  .branch-detail-dialog .destinations-inside {
+    margin: 18px 14px 0;
+  }
+  .branch-detail-dialog .destination-toolbar {
+    margin: 10px 0 12px;
+  }
+  .branch-detail-dialog .branch-detail-footer {
+    margin-top: 12px;
+    padding: 12px 14px;
   }
 }
 </style>
