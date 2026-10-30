@@ -422,14 +422,6 @@ async function remove() {
                 >
                   {{ tr('edit') }}
                 </button>
-                <button
-                  type="button"
-                  class="delete-action"
-                  :disabled="deletingId !== null"
-                  @click="requestDelete(branch)"
-                >
-                  {{ deletingId === branch.id ? tr('deleting') : tr('remove') }}
-                </button>
               </div>
             </td>
           </tr>
