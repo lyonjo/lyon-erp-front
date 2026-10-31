@@ -79,6 +79,7 @@ export default {
     User: 'المستخدم',
     'My Branches': 'فروعي',
     'Extra Items': 'الإضافات',
+    Manifest: 'بيان',
   },
   companies: {
     title: 'شركاتي',

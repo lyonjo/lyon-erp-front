@@ -79,6 +79,7 @@ export default {
     User: 'User',
     'My Branches': 'My Branches',
     'Extra Items': 'Extra Items',
+    Manifest: 'Manifest',
   },
   companies: {
     title: 'My Companies',
