@@ -144,7 +144,7 @@ onBeforeUnmount(() => {
               v-model.number="form.font"
               type="number"
               min="8"
-              max="40"
+              max="80"
               step="1"
               placeholder="13"
             /><span>pt</span>
