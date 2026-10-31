@@ -52,7 +52,7 @@ export default [
     label: 'Reservation',
     links: [
       link('/booking', 'Bookings', 'bookings'),
-      link('/bookings/manifest', 'Mani Vest', 'manifest'),
+      link('/rent/manifest', 'Mani Vest', 'manifest'),
     ],
   },
   {

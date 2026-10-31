@@ -238,6 +238,7 @@ const children = [
   },
   { path: 'branches/:id/edit', component: () => import('./views/BranchEditView.vue') },
   { path: 'branches/:id/view', component: () => import('./views/BranchShowView.vue') },
+  { path: 'manifest', component: () => import('./views/ManifestView.vue') },
 ]
 
 export default {
