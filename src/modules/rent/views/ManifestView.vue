@@ -55,12 +55,12 @@ async function viewManifest() {
       try {
         const payload = JSON.parse(await response.data.text())
         validation.value = payload.errors || {}
-        error.value = payload.message || tr('Failed to generate manifest.', 'تعذر إنشاء المانيفست.')
+        error.value = payload.message || tr('Failed to generate manifest.', 'تعذر إنشاء البيان.')
       } catch {
-        error.value = tr('Failed to generate manifest.', 'تعذر إنشاء المانيفست.')
+        error.value = tr('Failed to generate manifest.', 'تعذر إنشاء البيان.')
       }
     } else {
-      error.value = tr('Failed to generate manifest.', 'تعذر إنشاء المانيفست.')
+      error.value = tr('Failed to generate manifest.', 'تعذر إنشاء البيان.')
     }
   } finally {
     busy.value = false
@@ -73,7 +73,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="manifest-page">
-    <h1>{{ tr('Manifest', 'مانيفست') }}</h1>
+    <h1>{{ tr('Manifest', 'بيان') }}</h1>
     <form class="manifest-card" @submit.prevent="viewManifest">
       <div class="manifest-fields">
         <div class="field full">
@@ -156,7 +156,7 @@ onBeforeUnmount(() => {
         <p v-for="(messages, key) in validation" :key="key">{{ key }}: {{ messages.join(', ') }}</p>
       </div>
       <button class="submit" type="submit" :disabled="busy">
-        {{ busy ? tr('Generating...', 'جاري الإنشاء...') : tr('View Manifest', 'عرض المانيفست') }}
+        {{ busy ? tr('Generating...', 'جاري الإنشاء...') : tr('View Manifest', 'عرض البيان') }}
       </button>
     </form>
   </section>
