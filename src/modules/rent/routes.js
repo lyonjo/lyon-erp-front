@@ -22,6 +22,7 @@ const pages = {
   '/rent/settings': () => import('./views/RentSettingsView.vue'),
   '/rent/extra-items': () => import('./views/ExtraItemsView.vue'),
   '/rent/booking': () => import('./views/BookingsView.vue'),
+  '/rent/manifest': () => import('./views/ManifestView.vue'),
   '/rent/car-rentered': () => import('./views/ReservationCarsView.vue'),
   '/rent/available-car': () => import('./views/AvailableCarsView.vue'),
   '/rent/cars-expected-back': () => import('./views/CarExpectedBackView.vue'),
@@ -238,7 +239,6 @@ const children = [
   },
   { path: 'branches/:id/edit', component: () => import('./views/BranchEditView.vue') },
   { path: 'branches/:id/view', component: () => import('./views/BranchShowView.vue') },
-  { path: 'manifest', component: () => import('./views/ManifestView.vue') },
 ]
 
 export default {

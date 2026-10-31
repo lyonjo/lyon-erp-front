@@ -52,7 +52,8 @@ export default [
     label: 'Reservation',
     links: [
       link('/booking', 'Bookings', 'bookings'),
-      link('/rent/manifest', 'Mani Vest', 'manifest'),
+      // Registered as a fully implemented page; do not prepend /rent twice.
+      { to: '/rent/manifest', text: 'Manifest', permission: null },
     ],
   },
   {
