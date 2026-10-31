@@ -21,14 +21,17 @@ const selectedBranchName = computed(
   () => data.value.branches.find((b) => Number(b.id) === Number(selectedBranch.value))?.name || '',
 )
 const renewalRows = computed(() => data.value.renewal?.[renewalTab.value] || [])
+const branchVehicles = computed(() => {
+  const grouped = data.value.vehicles_by_branch || {}
+  return grouped[String(selectedBranch.value)] || []
+})
 const tval = (v) => (v === null || v === undefined || v === '' ? '—' : String(v))
 
-async function load(branchId = null) {
+async function load() {
   loading.value = true
   error.value = ''
   try {
-    const params = branchId ? { branch_id: branchId } : {}
-    const result = await api.get('/rent/dashboard', { params })
+    const result = await api.get('/rent/dashboard')
     data.value = result.data?.data || result.data
     selectedBranch.value = data.value.selected_branch_id
   } catch (e) {
@@ -39,7 +42,7 @@ async function load(branchId = null) {
   }
 }
 function chooseBranch(id) {
-  if (Number(id) !== Number(selectedBranch.value)) load(id)
+  selectedBranch.value = Number(id)
 }
 onMounted(() => load())
 </script>
@@ -47,10 +50,7 @@ onMounted(() => load())
 <template>
   <section class="dashboard" :dir="ar ? 'rtl' : 'ltr'">
     <div v-if="error" class="error">
-      {{ error }}
-      <button type="button" @click="load(selectedBranch)">
-        {{ tr('Retry', 'إعادة المحاولة') }}
-      </button>
+      {{ error }} <button type="button" @click="load()">{{ tr('Retry', 'إعادة المحاولة') }}</button>
     </div>
     <div v-if="loading" class="loading">
       {{ tr('Loading dashboard...', 'جاري تحميل لوحة التحكم...') }}
@@ -82,13 +82,13 @@ onMounted(() => load())
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="v in data.vehicles" :key="v.id">
+                <tr v-for="v in branchVehicles" :key="v.id">
                   <td>{{ tval(v.number) }}</td>
                   <td>{{ tval(v.name) }}</td>
                   <td>{{ tval(v.brand) }}</td>
                   <td>{{ tval(v.model_year) }}</td>
                 </tr>
-                <tr v-if="!data.vehicles?.length">
+                <tr v-if="!branchVehicles.length">
                   <td colspan="4" class="empty">
                     {{ tr('No vehicles for this branch.', 'لا توجد مركبات لهذا الفرع.') }}
                   </td>
